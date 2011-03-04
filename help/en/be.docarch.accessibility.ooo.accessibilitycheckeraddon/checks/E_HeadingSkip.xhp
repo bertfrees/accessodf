@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<helpdocument version="1.0">
+    <meta>
+        <topic id="E_HeadingSkip" indexer="include" status="PUBLISH">
+            <title id="tit" xml-lang="en">E_HeadingSkip</title>
+            <filename>/be.docarch.accessibility.ooo.accessibilitycheckeraddon/checks/E_HeadingSkip.xhp</filename>
+        </topic>
+    </meta>
+    <body>
+        <bookmark id="bookmark0" xml-lang="en" branch="hid/be.docarch.accessibility.ooo.accessibilitycheckeraddon:E_HeadingSkip" localize="false"/>
+
+        <paragraph id="heading1" role="heading" xml-lang="en" level="1" l10n="NEW">
+            E_SkipHeading
+        </paragraph>
+
+        <paragraph id="paragraph1" role="paragraph" xml-lang="en" l10n="NEW">
+            Bla bla bla
+            <link href="http://www.openoffice.org" name="link-voorbeeld"><emph>Externe link</emph></link>
+        </paragraph>
+
+    </body>
+</helpdocument>
+
