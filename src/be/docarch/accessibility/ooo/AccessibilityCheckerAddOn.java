@@ -7,7 +7,6 @@ import java.util.logging.Handler;
 import java.util.logging.FileHandler;
 import java.util.logging.SimpleFormatter;
 
-import com.sun.star.beans.PropertyValue;
 import com.sun.star.beans.XPropertySet;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;

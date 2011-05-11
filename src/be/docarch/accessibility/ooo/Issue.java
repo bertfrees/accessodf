@@ -263,11 +263,11 @@ public class Issue {
 
         if (check != null &&
             element != null &&
-            check.getClass() == InternalCheck.class &&
+            check.getClass() == GeneralCheck.class &&
            (check.getRepairMode() == Check.RepairMode.AUTO ||
             check.getRepairMode() == Check.RepairMode.SEMI_AUTOMATED)) {
 
-            switch (InternalCheck.ID.valueOf(check.getIdentifier())) {
+            switch (GeneralCheck.ID.valueOf(check.getIdentifier())) {
                 case A_ImageWithoutAlt:
                 case A_FormulaWithoutAlt:
                 case A_ObjectWithoutAlt:

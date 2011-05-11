@@ -3,6 +3,7 @@ package be.docarch.accessibility.ooo;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.Collection;
 
@@ -331,12 +332,12 @@ public class AccessibilityDialog implements XActionListener,
         node2CheckMap.clear();
 
         int index = 0;
-        ArrayList<Issue> issueList;
+        List<Issue> issueList;
         XMutableTreeNode issueNode;
         XMutableTreeNode checkNode;
         XMutableTreeNode rootNode = dataModel.createNode("root", true);
         dataModel.setRoot(rootNode);
-        for (Check check : manager.getCheckSet()) {
+        for (Check check : manager.getChecks()) {
             issueList = manager.getIssuesByCheck(check);
             if (issueList.size() == 1 &&
                 issueList.get(0).getElement().getType() == Element.Type.DOCUMENT) {

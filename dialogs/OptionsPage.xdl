@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE dlg:window PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "dialog.dtd">
 <dlg:window xmlns:dlg="http://openoffice.org/2000/dialog" xmlns:script="http://openoffice.org/2000/script" dlg:id="OptionsPage" dlg:left="111" dlg:top="52" dlg:width="228" dlg:height="212" dlg:closeable="true" dlg:moveable="true" dlg:title="Accessibility Checker" dlg:withtitlebar="false">
- <dlg:styles>
-  <dlg:style dlg:style-id="0" dlg:border="0xc0c0c0"/>
- </dlg:styles>
  <dlg:bulletinboard>
-  <dlg:checkbox dlg:id="CheckBox1" dlg:tab-index="0" dlg:left="8" dlg:top="96" dlg:width="167" dlg:height="10" dlg:value="Braille checks" dlg:checked="false"/>
-  <dlg:menulist dlg:style-id="0" dlg:id="ListBox1" dlg:tab-index="1" dlg:left="16" dlg:top="25" dlg:width="159" dlg:height="60"/>
-  <dlg:text dlg:id="Label1" dlg:tab-index="2" dlg:left="16" dlg:top="11" dlg:width="159" dlg:height="10" dlg:value="General checks"/>
-  <dlg:menulist dlg:style-id="0" dlg:id="ListBox2" dlg:tab-index="3" dlg:left="16" dlg:top="110" dlg:width="159" dlg:height="60"/>
+  <dlg:checkbox dlg:id="CheckBox1" dlg:tab-index="4" dlg:left="8" dlg:top="11" dlg:width="167" dlg:height="10" dlg:value="DAISY checks" dlg:checked="false"/>
+  <dlg:checkbox dlg:id="CheckBox2" dlg:tab-index="5" dlg:left="8" dlg:top="23" dlg:width="167" dlg:height="10" dlg:value="Braille checks" dlg:checked="false"/>
  </dlg:bulletinboard>
 </dlg:window>

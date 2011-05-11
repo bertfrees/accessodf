@@ -1,7 +1,7 @@
 package be.docarch.accessibility;
 
 import java.io.File;
-import java.util.Set;
+import java.util.Collection;
 import java.util.Date;
 
 
@@ -13,7 +13,7 @@ public interface Checker {
 
     public String getIdentifier();
 
-    public Set<Check> getChecks();
+    public Collection<Check> getChecks();
 
     public Check getCheck(String identifier);
 

@@ -1,4 +1,4 @@
-package be.docarch.accessibility.ooo.optionspage;
+package be.docarch.accessibility.ooo;
 
 import com.sun.star.beans.PropertyState;
 import com.sun.star.beans.PropertyValue;

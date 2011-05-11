@@ -9,7 +9,7 @@ import be.docarch.accessibility.Check;
  *
  * @author Bert Frees
  */
-public class InternalCheck extends Check {
+public class GeneralCheck extends Check {
 
     private static Locale locale = Locale.getDefault();
     private static ResourceBundle names = ResourceBundle.getBundle("be/docarch/accessibility/l10n/names", locale);
@@ -26,7 +26,6 @@ public class InternalCheck extends Check {
         E_HeadingInFrame,
         E_HeadingInSection,         // *** (?)
         E_DefaultLanguage,
-        E_UnsupportedImageFormat,
         E_ImageAnchorFloat,         // ***
         A_NoHeadings,
         A_NoSubtitle,
@@ -62,7 +61,7 @@ public class InternalCheck extends Check {
 
     private ID identifier;
 
-    public InternalCheck(ID identifier) {
+    public GeneralCheck(ID identifier) {
         this.identifier = identifier;
     }
 
@@ -80,7 +79,6 @@ public class InternalCheck extends Check {
             case E_HeadingInFrame:
             case E_HeadingInSection:
             case E_DefaultLanguage:
-            case E_UnsupportedImageFormat:
             case E_ImageAnchorFloat:
                 return Status.ERROR;
             
@@ -140,7 +138,6 @@ public class InternalCheck extends Check {
             case E_DefaultLanguage:
             case A_UnidentifiedLanguage:
                 return Category.LANGUAGE;
-            case E_UnsupportedImageFormat:
             case A_LinkedImage:
             case A_ImageWithoutAlt:
             case E_ImageAnchorFloat:
@@ -215,7 +212,6 @@ public class InternalCheck extends Check {
             case A_ObjectWithoutAlt:
             case A_EmptyTitleField:
             case E_DefaultLanguage:
-            case A_LinkedImage:
             case A_NoTableHeading:
                 return RepairMode.SEMI_AUTOMATED;
             case A_JustifiedText:
@@ -224,6 +220,7 @@ public class InternalCheck extends Check {
             case E_EmptyTitle:
             case E_EmptyHeading:
                 return RepairMode.AUTO;
+            case A_LinkedImage:
             default:
                 return RepairMode.MANUAL;
         }

@@ -14,7 +14,6 @@ import com.sun.star.lang.XServiceInfo;
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.lang.XInitialization;
 import com.sun.star.awt.XWindow;
-import com.sun.star.frame.XFrame;
 import com.sun.star.ui.XUIElementFactory;
 import com.sun.star.ui.XUIElement;
 import com.sun.star.lib.uno.helper.Factory;
@@ -23,7 +22,6 @@ import com.sun.star.registry.XRegistryKey;
 
 import com.sun.star.container.NoSuchElementException;
 import com.sun.star.lang.IllegalArgumentException;
-
 
 public class ToolPanelFactory  {
 

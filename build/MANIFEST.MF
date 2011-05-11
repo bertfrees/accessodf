@@ -4,7 +4,7 @@ Created-By: 14.3-b01 (Sun Microsystems Inc.)
 UNO-Type-Path: 
 RegistrationClassName: be.docarch.accessibility.ooo.CentralRegistratio
  nClass
-Class-Path: lib/juh-2.1.0.jar lib/commons-collections-3.2.1.jar
+Class-Path: lib/commons-collections-3.2.1.jar
 
 Name: be/docarch/accessibility/ooo/CentralRegistrationClass.class
 RegistrationClasses: be.docarch.accessibility.ooo.AccessibilityChecker

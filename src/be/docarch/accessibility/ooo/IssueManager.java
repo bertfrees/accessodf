@@ -3,8 +3,9 @@ package be.docarch.accessibility.ooo;
 import java.util.Date;
 import java.util.logging.Logger;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
-import java.util.Set;
+import java.util.Collection;
 import java.util.Collections;
 import java.io.File;
 import java.text.SimpleDateFormat;
@@ -30,7 +31,6 @@ import be.docarch.accessibility.Check;
 import be.docarch.accessibility.Checker;
 import be.docarch.accessibility.ExternalChecker;
 
-
 /**
  *
  * @author Bert Frees
@@ -46,19 +46,20 @@ public class IssueManager {
     private XURI CHECKER = null;
 
     private Document document = null;
+    private Settings settings = null;
     private InternalChecker internalChecker = null;
-    private ArrayList<ExternalChecker> externalCheckers = null;
+    private List<ExternalChecker> externalCheckers = null;
 
     private ArrayList<Issue> allIssues = null;
     private FilterSorter filterSorter = null;
     private Issue selectedIssue = null;
     private Check selectedCheck = null;
-    private HashMap<Check,ArrayList<Issue>> check2IssuesMap = null;
+    private HashMap<Check,List<Issue>> check2IssuesMap = null;
 
 
     public IssueManager(Document document,
                         InternalChecker internalChecker,
-                        ArrayList<ExternalChecker> externalCheckers)
+                        List<ExternalChecker> externalCheckers)
                  throws IllegalArgumentException,
                         NoSuchElementException,
                         RepositoryException,
@@ -72,6 +73,7 @@ public class IssueManager {
         this.document = document;
         this.internalChecker = internalChecker;
         this.externalCheckers = externalCheckers;
+        this.settings = new Settings(document.xContext);
 
         Checker[] allCheckers = new Checker[1 + externalCheckers.size()];
         allCheckers[0] = internalChecker;
@@ -81,7 +83,7 @@ public class IssueManager {
 
         Issue.setDocument(document, allCheckers);
 
-        check2IssuesMap = new HashMap<Check,ArrayList<Issue>>();
+        check2IssuesMap = new HashMap<Check,List<Issue>>();
 
         RDF_TYPE = URI.create(document.xContext, URIs.RDF_TYPE);
         EARL_ASSERTION = URI.create(document.xContext, URIs.EARL_ASSERTION);
@@ -114,16 +116,19 @@ public class IssueManager {
         internalChecker.check();
 
         // Get external accessibility reports and store in metadata
-        if (externalCheckers.size() > 0) {
-            File odtFile = File.createTempFile("accessibility", ".odt");
-            odtFile.deleteOnExit();
-            document.ensureMetadataReferences();
-            document.storeToFile(odtFile);
-            for (ExternalChecker checker : externalCheckers) {
-                checker.setOdtFile(odtFile);
-                checker.check();
-                document.importAccessibilityData(checker.getAccessibilityReport(), 
-                    checker.getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(checker.getLastChecked()) + ".rdf");
+        settings.loadData();
+        if (settings.brailleChecks()) {
+            if (externalCheckers.size() > 0) {
+                File odtFile = File.createTempFile("accessibility", ".odt");
+                odtFile.deleteOnExit();
+                document.ensureMetadataReferences();
+                document.storeToFile(odtFile);
+                for (ExternalChecker checker : externalCheckers) {
+                    checker.setOdtFile(odtFile);
+                    checker.check();
+                    document.importAccessibilityData(checker.getAccessibilityReport(),
+                        checker.getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(checker.getLastChecked()) + ".rdf");
+                }
             }
         }
 
@@ -256,11 +261,11 @@ public class IssueManager {
         }
     }
 
-    public Set<Check> getCheckSet() {
+    public Collection<Check> getChecks() {
         return check2IssuesMap.keySet();
     }
 
-    public ArrayList<Issue> getIssuesByCheck(Check check) {
+    public List<Issue> getIssuesByCheck(Check check) {
         return check2IssuesMap.get(check);
     }
 

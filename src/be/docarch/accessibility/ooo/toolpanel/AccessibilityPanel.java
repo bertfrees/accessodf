@@ -3,6 +3,7 @@ package be.docarch.accessibility.ooo.toolpanel;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -76,6 +77,7 @@ import com.sun.star.container.ElementExistException;
 import com.sun.star.container.NoSuchElementException;
 import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.PropertyVetoException;
+import com.sun.star.awt.tree.ExpandVetoException;
 
 
 public class AccessibilityPanel extends ComponentBase
@@ -142,24 +144,21 @@ public class AccessibilityPanel extends ComponentBase
     private XTextViewCursor viewCursor = null;
     private XSelectionSupplier selectionSupplier = null;
 
+    private Issue currentFocus = null;
+
     private XMutableTreeDataModel dataModel = null;
     private HashMap<Issue,XMutableTreeNode> issue2NodeMap = null;
     private HashMap<Check,XMutableTreeNode> check2NodeMap = null;
     private HashMap<Integer,Issue> node2IssueMap = null;
     private HashMap<Integer,Check> node2CheckMap = null;
 
-    private HashMap<Check.Status,String> L10N_checkStatus = null;
     private boolean ignoreSelectionEvent = false;
-
+    private boolean showRepairedIssues = false;
 
     public AccessibilityPanel(XComponentContext xContext,
                               XWindow panelAnchorWindow) {
 
         logger.entering("AccessibilityPanel", "<init>");
-
-        L10N_checkStatus = new HashMap<Check.Status,String>();
-        L10N_checkStatus.put(Check.Status.ALERT, "WARNING");
-        L10N_checkStatus.put(Check.Status.ERROR, "ERROR");
 
         try {
 
@@ -452,7 +451,7 @@ public class AccessibilityPanel extends ComponentBase
             imageDir = xPkgInfo.getPackageLocation("be.docarch.accessibility.ooo.accessibilitycheckeraddon") + "/images";
             document = new Document(xContext);
             InternalChecker internalChecker = new InternalChecker(document);
-            ArrayList<ExternalChecker> externalCheckers = new ArrayList<ExternalChecker>();
+            List<ExternalChecker> externalCheckers = new ArrayList<ExternalChecker>();
 
             // Find & load odt2braille package
 
@@ -463,21 +462,18 @@ public class AccessibilityPanel extends ComponentBase
             String odt2braillePackage = xPkgInfo.getPackageLocation("be.docarch.odt2braille.ooo.odt2brailleaddon");
             if (odt2braillePackage.length() > 0) {
                 File dir = new File(odt2braillePackage.substring(6));
-                URL url = null;
+                List<URL> urls = new ArrayList<URL>();
                 File[] jars = dir.listFiles(jarFilter);
                 for (File jar : jars) {
-                    url = new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/");
+                    urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
                     break;
                 }
-
-                // lib directory staat ook aangegeven in hoofd-jar => automatisch geladen?
-
-//                File lib = new File(dir.getAbsolutePath() + File.separator + "lib");
-//                jars = lib.listFiles(jarFilter);
-//                for (File jar : jars) {
-//                    urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
-//                }
-                URLClassLoader classLoader = new URLClassLoader(new URL[] { url }, ExternalChecker.class.getClassLoader());
+                File lib = new File(dir.getAbsolutePath() + File.separator + "lib");
+                jars = lib.listFiles(jarFilter);
+                for (File jar : jars) {
+                    urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
+                }
+                URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[urls.size()]), ExternalChecker.class.getClassLoader());                
                 for (ExternalChecker checker : ServiceLoader.load(ExternalChecker.class, classLoader)) {
                     externalCheckers.add(checker);
                     break;
@@ -506,9 +502,11 @@ public class AccessibilityPanel extends ComponentBase
             ignoreButton.addActionListener(this);
             treeControl.addSelectionChangeListener(this);
 
-            selectIssue(null);
+            manager.selectIssue(null);
+
             buildTreeView();
             updateDialogFields();
+            updateFocus();
 
         } catch (java.net.MalformedURLException ex) {
             handleUnexpectedException(ex);
@@ -542,6 +540,7 @@ public class AccessibilityPanel extends ComponentBase
                                   NoSuchElementException,
                                   WrappedTargetException,
                                   PropertyVetoException,
+                                  ExpandVetoException,
                                   java.text.ParseException,
                                   java.io.IOException,
                                   com.sun.star.uno.Exception {
@@ -550,36 +549,60 @@ public class AccessibilityPanel extends ComponentBase
 
         manager.refresh();
 
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        currentFocus = null;
+        Issue oldIssue = manager.getSelectedIssue();
+        Check oldCheck = manager.getSelectedCheck();
+
         manager.selectIssue(null);
 
         buildTreeView();
 
-        //treeControl.removeSelectionChangeListener(this); // werkt niet
-        ignoreSelectionEvent = true;
-        if (issue2NodeMap.containsKey(selectedIssue)) {
-            if (check2NodeMap.containsKey(selectedCheck)) {
-                treeControl.expandNode(check2NodeMap.get(selectedCheck));
-            }
-            treeControl.select(issue2NodeMap.get(selectedIssue));
-            selectIssue(selectedIssue);
-        } else if (check2NodeMap.containsKey(selectedCheck)) {
-            treeControl.select(check2NodeMap.get(selectedCheck));
-            selectCheck(selectedCheck);
+        if (selectIssueNode(oldIssue)) {
+            manager.selectIssue(oldIssue);
+        } else if (selectCheckNode(oldCheck)) {
+            manager.selectCheck(oldCheck);
         } else {
-            selectIssue(null);
+            treeControl.clearSelection();
         }
-        //treeControl.addSelectionChangeListener(this);
-        ignoreSelectionEvent = false;
+
+        updateDialogFields();
+        updateFocus();
 
         ignoreButtonProperties.setPropertyValue("Enabled", true); // hack
         repairButtonProperties.setPropertyValue("Enabled", true);
 
-        updateDialogFields();
-
         logger.exiting("AccessibilityPanel", "refresh");
 
+    }
+
+    private boolean selectCheckNode(Check check)
+                             throws IllegalArgumentException,
+                                    ExpandVetoException {
+
+        if (check2NodeMap.containsKey(check)) {
+            ignoreSelectionEvent = true;
+            treeControl.makeNodeVisible(check2NodeMap.get(check));
+            treeControl.select(check2NodeMap.get(check));
+            ignoreSelectionEvent = false;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    private boolean selectIssueNode(Issue issue)
+                             throws IllegalArgumentException,
+                                    ExpandVetoException {
+
+        if (issue2NodeMap.containsKey(issue)) {
+            ignoreSelectionEvent = true;            
+            treeControl.makeNodeVisible(issue2NodeMap.get(issue));
+            treeControl.select(issue2NodeMap.get(issue));
+            ignoreSelectionEvent = false;
+            return true;
+        } else {
+            return false;
+        }
     }
 
     private void clear() throws IllegalArgumentException,
@@ -594,52 +617,13 @@ public class AccessibilityPanel extends ComponentBase
 
         manager.clear();
 
-        selectIssue(null);
+        manager.selectIssue(null);        
         buildTreeView();
         updateDialogFields();
+        updateFocus();
 
         logger.exiting("AccessibilityPanel", "clear");
 
-    }
-
-    private void selectIssue(Issue issue) {
-
-        Issue selectedIssue = manager.getSelectedIssue();
-
-        try {
-
-            if (issue == null) {
-                removeSelection();
-            } else if (selectedIssue == null) {
-                focusOn(issue.getElement());
-            } else if (!issue.getElement().equals(selectedIssue.getElement())) {
-                focusOn(issue.getElement());
-            }
-
-        } catch (IllegalArgumentException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        } catch (NoSuchElementException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        } catch (WrappedTargetException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        }
-
-        manager.selectIssue(issue);
-    }
-
-    private void selectCheck(Check check) {
-
-        try {
-            removeSelection();
-        } catch (IllegalArgumentException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        } catch (NoSuchElementException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        } catch (WrappedTargetException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        }
-
-        manager.selectCheck(check);
     }
 
     private void buildTreeView() throws com.sun.star.uno.Exception {
@@ -656,22 +640,26 @@ public class AccessibilityPanel extends ComponentBase
         node2CheckMap.clear();
 
         int index = 0;
-        ArrayList<Issue> issueList;
+        List<Issue> issueList;
         XMutableTreeNode issueNode;
         XMutableTreeNode checkNode;
         XMutableTreeNode rootNode = dataModel.createNode("root", true);
+        XMutableTreeNode warningsNode = dataModel.createNode("WARNINGS", true);
+        XMutableTreeNode errorsNode = dataModel.createNode("ERRORS", true);
         dataModel.setRoot(rootNode);
-        for (Check check : manager.getCheckSet()) {
+
+        for (Check check : manager.getChecks()) {
+            
             issueList = manager.getIssuesByCheck(check);
             if (issueList.size() == 1 &&
                 issueList.get(0).getElement().getType() == Element.Type.DOCUMENT) {
-                checkNode = dataModel.createNode(L10N_checkStatus.get(check.getStatus()) + ": " + check.getName(), false);
+                checkNode = dataModel.createNode("", false);
                 checkNode.setDataValue(new Any(Type.LONG, index));
                 node2IssueMap.put(index++, issueList.get(0));
                 issue2NodeMap.put(issueList.get(0), checkNode);
                 check2NodeMap.put(check, checkNode);
             } else {
-                checkNode = dataModel.createNode(L10N_checkStatus.get(check.getStatus()) + ": " + check.getName() + " (" + issueList.size() + ")", true);
+                checkNode = dataModel.createNode("", true);
                 checkNode.setDataValue(new Any(Type.LONG, index));
                 node2CheckMap.put(index++, check);
                 check2NodeMap.put(check, checkNode);
@@ -680,19 +668,43 @@ public class AccessibilityPanel extends ComponentBase
                     issueNode.setDataValue(new Any(Type.LONG, index));
                     node2IssueMap.put(index++, issue);
                     issue2NodeMap.put(issue, issueNode);
-                    updateIssueNode(issueNode, issue);
                     checkNode.appendChild(issueNode);
+                    updateIssueNode(issue);
                 }
             }
-            updateCheckNode(checkNode, check);
-            rootNode.appendChild(checkNode);
+
+            switch (check.getStatus()) {
+                case ERROR:
+                    errorsNode.appendChild(checkNode); break;
+                case ALERT:
+                    warningsNode.appendChild(checkNode); break;
+            }
+
+            updateCheckNode(check);            
+        }
+
+        if (errorsNode.getChildCount()>0) {
+            rootNode.appendChild(errorsNode);
+            errorsNode.setNodeGraphicURL(imageDir + "/alert_20x20.gif");
+        }
+        if (warningsNode.getChildCount()>0) {
+            rootNode.appendChild(warningsNode);
+            warningsNode.setNodeGraphicURL(imageDir + "/warning_20x20.gif");
         }
 
         treeControlProperties.setPropertyValue("DataModel", dataModel);
         treeControlProperties.setPropertyValue("RowHeight", 20);
         treeControlProperties.setPropertyValue("RootDisplayed", false);
+        treeControlProperties.setPropertyValue("ShowsHandles", false);
+        treeControlProperties.setPropertyValue("ShowsRootHandles", false);
         treeControlProperties.setPropertyValue("SelectionType", com.sun.star.view.SelectionType.SINGLE);
 
+        if (warningsNode.getChildCount()>0) {
+            treeControl.makeNodeVisible(warningsNode.getChildAt(0));
+        }
+        if (errorsNode.getChildCount()>0) {
+            treeControl.makeNodeVisible(errorsNode.getChildAt(0));
+        }
     }
 
     private void updateDialogFields() throws UnknownPropertyException,
@@ -727,13 +739,38 @@ public class AccessibilityPanel extends ComponentBase
                 case ALERT:
                     image = "warning.png"; break;
                 case ERROR:
-                    image = "error.png"; break;
+                    image = "alert.png"; break;
             }
 
             statusImageControlProperties.setPropertyValue("ImageURL", imageDir + "/" + image);
         }
 
         updateButtons();
+    }
+
+    private void updateFocus() {
+
+        Issue selectedIssue = manager.getSelectedIssue();
+
+        try {
+
+            if (selectedIssue == null) {
+                removeSelection();
+            } else if (currentFocus == null) {
+                focus(selectedIssue.getElement());
+            } else if (!selectedIssue.getElement().equals(currentFocus.getElement())) {
+                focus(selectedIssue.getElement());
+            }
+
+            currentFocus = selectedIssue;
+
+        } catch (IllegalArgumentException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        } catch (NoSuchElementException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        } catch (WrappedTargetException ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
     }
 
     private void updateButtons() throws UnknownPropertyException,
@@ -786,49 +823,99 @@ public class AccessibilityPanel extends ComponentBase
         }
     }
 
-    private void updateCheckNode(XMutableTreeNode node,
-                                 Check check)
-                          throws com.sun.star.uno.Exception {
+    private boolean updateCheckNode(Check check)
+                             throws IllegalArgumentException {
 
-        if (node != null) {
-            String image = "";
-            switch (manager.getCheckStatus(check)) {
-                case IGNORED:
-                    image = "gray_15x20.png"; break;
-                case REPAIRED:
-                    image = "green_15x20.png"; break;
-                case ALERT:
-                    image = "orange_15x20.png"; break;
-                case ERROR:
-                    image = "red_15x20.png"; break;
-            }
-            node.setNodeGraphicURL(imageDir + "/" + image);
+        XMutableTreeNode node = check2NodeMap.get(check);
+        if (node == null) { return false; }
+        XMutableTreeNode parent = (XMutableTreeNode)node.getParent();
+        if (parent == null) { return false; }
+
+        String image = "";
+        String text = "";
+        switch (manager.getCheckStatus(check)) {
+            case IGNORED:
+                image = "gray_15x20.png";
+                text = "IGNORED";
+                break;
+            case REPAIRED:
+                if (!showRepairedIssues) {
+                    try {
+                        check2NodeMap.remove(check);
+                        parent.removeChildByIndex(parent.getIndex(node));
+                        return false;
+                    } catch (IndexOutOfBoundsException e) {
+                    }
+                }
+                image = "green_15x20.png";
+                text = "REPAIRED";
+                break;
+            case ALERT:
+                image = "orange_15x20.png";
+                text = "WARNING";
+                break;
+
+            case ERROR:
+                image = "red_15x20.png";
+                text = "ERROR";
+                break;
         }
+
+        //text += ": " + check.getName();
+        text = check.getName();
+
+        if (node.getChildCount()>0) {
+            text += " (" + node.getChildCount() + ")";
+        }
+
+        //node.setNodeGraphicURL(imageDir + "/" + image);
+        node.setDisplayValue(text);
+        return true;
     }
 
-    private void updateIssueNode(XMutableTreeNode node,
-                                 Issue issue) {
+    private boolean updateIssueNode(Issue issue)
+                             throws IllegalArgumentException {
 
-        if (node != null) {
-            String image = "";
-            switch (manager.getIssueStatus(issue)) {
-                case IGNORED:
-                    image = "gray_15x20.png"; break;
-                case REPAIRED:
-                    image = "green_15x20.png"; break;
-                case ALERT:
-                    image = "orange_15x20.png"; break;
-                case ERROR:
-                    image = "red_15x20.png"; break;
-            }
-            node.setNodeGraphicURL(imageDir + "/" + image);
+        XMutableTreeNode node = issue2NodeMap.get(issue);
+        if (node == null) { return false; }
+        XMutableTreeNode parent = (XMutableTreeNode)node.getParent();
+        if (parent == null) { return false; }
+
+        String image = "";
+        switch (manager.getIssueStatus(issue)) {
+            case IGNORED:
+                image = "gray_15x20.png";
+                break;
+            case REPAIRED:
+                if (!showRepairedIssues) {
+                    try {
+                        issue2NodeMap.remove(issue);
+                        if (issue.getElement().getType() == Element.Type.DOCUMENT) {
+                            check2NodeMap.remove(issue.getCheck());
+                        }
+                        parent.removeChildByIndex(parent.getIndex(node));
+                        return false;
+                    } catch (IndexOutOfBoundsException e) {
+                    }
+                }
+                image = "green_15x20.png";
+                break;
+            case ALERT:
+                image = "orange_15x20.png";
+                break;
+            case ERROR:
+                image = "red_15x20.png";
+                break;
         }
+
+        //node.setNodeGraphicURL(imageDir + "/" + image);
+        return true;
     }
 
-    private boolean focusOn(Element element)
-                     throws IllegalArgumentException,
-                            NoSuchElementException,
-                            WrappedTargetException {
+    private boolean focus(Element element)
+                   throws IllegalArgumentException,
+                          NoSuchElementException,
+                          WrappedTargetException {
 
         removeSelection();
 
@@ -894,33 +981,6 @@ public class AccessibilityPanel extends ComponentBase
 
     }
 
-    public void disposing() {
-
-        if (window == null) {
-            return;
-        }
-
-        window.removeWindowListener(this);
-        hScrollBar.removeAdjustmentListener(this);
-        vScrollBar.removeAdjustmentListener(this);
-        refreshButton.removeActionListener(this);
-        repairButton.removeActionListener(this);
-        clearButton.removeActionListener(this);
-        ignoreButton.removeActionListener(this);
-        treeControl.removeSelectionChangeListener(this);
-        
-        try{
-            XComponent xWindowComp = (XComponent)UnoRuntime.queryInterface(XComponent.class, window);
-            xWindowComp.dispose();
-        } catch(Exception ex) {
-            logger.log(Level.SEVERE, null, ex);
-        }
-    }
-
-    // XItemListener
-    public void itemStateChanged(ItemEvent event) {
-    }
-
     // XActionListener
     public void actionPerformed(ActionEvent actionEvent) {
 
@@ -942,25 +1002,39 @@ public class AccessibilityPanel extends ComponentBase
 
                 if (selectedIssue != null) {
                     selectedIssue.setIgnored(true);
-                    updateIssueNode(issue2NodeMap.get(selectedIssue), selectedIssue);
-                    updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
-                    updateDialogFields();
+                    if (!updateIssueNode(selectedIssue)) {
+                        manager.selectCheck(selectedIssue.getCheck());
+                        selectCheckNode(manager.getSelectedCheck());
+                    }
+                    if (!updateCheckNode(manager.getSelectedCheck())) {
+                        manager.selectCheck(null);
+                        treeControl.clearSelection();
+                    }                    
                 } else if (selectedCheck != null) {
                     for (Issue issue : manager.getIssuesByCheck(selectedCheck)) {
                         issue.setIgnored(true);
-                        updateIssueNode(issue2NodeMap.get(issue), issue);
+                        updateIssueNode(issue);
                     }
-                    updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
-                    updateDialogFields();
+                    if (!updateCheckNode(selectedCheck)) {
+                        manager.selectCheck(null);
+                        treeControl.clearSelection();
+                    }
                 }
+                updateDialogFields();
+                updateFocus();
 
             } else if (source.equals(repairButton)) {
 
                 if (selectedIssue != null) {
                     if (selectedIssue.repair()) {
-                        updateIssueNode(issue2NodeMap.get(selectedIssue), selectedIssue);
-                        updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
-                        updateDialogFields();
+                        if (!updateIssueNode(selectedIssue)) {
+                            manager.selectCheck(selectedIssue.getCheck());
+                            selectCheckNode(manager.getSelectedCheck());
+                        }
+                        if (!updateCheckNode(manager.getSelectedCheck())) {
+                            manager.selectCheck(null);
+                            treeControl.clearSelection();
+                        }
                     }
                 } else if (selectedCheck != null) {
                     boolean repaired = false;
@@ -968,15 +1042,19 @@ public class AccessibilityPanel extends ComponentBase
                         if (!issue.isRepaired() && !issue.isIgnored()) {
                             if (issue.repair()) {
                                 repaired = true;
-                                updateIssueNode(issue2NodeMap.get(issue), issue);
+                                updateIssueNode(issue);
                             }
                         }
                     }
                     if (repaired) {
-                        updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
-                        updateDialogFields();
+                        if (!updateCheckNode(selectedCheck)) {
+                            manager.selectCheck(null);
+                            treeControl.clearSelection();
+                        }
                     }
                 }
+                updateDialogFields();
+                updateFocus();
             }
 
         } catch (java.io.IOException ex) {
@@ -1004,6 +1082,72 @@ public class AccessibilityPanel extends ComponentBase
         } catch (RuntimeException ex) {
             logger.log(Level.SEVERE, null, ex);
         }
+    }
+
+    // XSelectionChangeListener
+    public void selectionChanged(EventObject event) {
+
+        if (!ignoreSelectionEvent) {
+
+            try {
+
+                Object o = treeControl.getSelection();
+                if (o != null && !AnyConverter.isVoid(o)) {
+                    XMutableTreeNode node = (XMutableTreeNode)AnyConverter.toObject(XMutableTreeNode.class, o);
+                    Object d = node.getDataValue();
+                    if (d != null && !AnyConverter.isVoid(d)) {
+                        int index = AnyConverter.toInt(d);
+                        if (node2IssueMap.containsKey(index)) {
+                            manager.selectIssue(node2IssueMap.get(index));
+                        } else if (node2CheckMap.containsKey(index)) {
+                            manager.selectCheck(node2CheckMap.get(index));
+                        } else {
+                            manager.selectIssue(null);
+                        }
+                    } else {
+                        manager.selectIssue(null);
+                    }
+                    updateDialogFields();
+                    updateFocus();
+                }
+
+            } catch (IllegalArgumentException ex) {
+                logger.log(Level.SEVERE, null, ex);
+            } catch (UnknownPropertyException ex) {
+                logger.log(Level.SEVERE, null, ex);
+            } catch (PropertyVetoException ex) {
+                logger.log(Level.SEVERE, null, ex);
+            } catch (WrappedTargetException ex) {
+                logger.log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+
+    public void disposing() {
+
+        if (window == null) {
+            return;
+        }
+
+        window.removeWindowListener(this);
+        hScrollBar.removeAdjustmentListener(this);
+        vScrollBar.removeAdjustmentListener(this);
+        refreshButton.removeActionListener(this);
+        repairButton.removeActionListener(this);
+        clearButton.removeActionListener(this);
+        ignoreButton.removeActionListener(this);
+        treeControl.removeSelectionChangeListener(this);
+
+        try{
+            XComponent xWindowComp = (XComponent)UnoRuntime.queryInterface(XComponent.class, window);
+            xWindowComp.dispose();
+        } catch(Exception ex) {
+            logger.log(Level.SEVERE, null, ex);
+        }
+    }
+
+    // XItemListener
+    public void itemStateChanged(ItemEvent event) {
     }
 
     // XWindowListener
@@ -1064,42 +1208,6 @@ public class AccessibilityPanel extends ComponentBase
     }
 
     public void windowHidden(EventObject event) {
-    }
-
-    // XSelectionChangeListener
-    public void selectionChanged(EventObject event) {
-
-        if (!ignoreSelectionEvent) {
-
-            try {
-
-                Object o = treeControl.getSelection();
-                if (o != null && !AnyConverter.isVoid(o)) {
-                    XMutableTreeNode node = (XMutableTreeNode)AnyConverter.toObject(XMutableTreeNode.class, o);
-                    Object d = node.getDataValue();
-                    if (d != null && !AnyConverter.isVoid(d)) {
-                        int index = AnyConverter.toInt(d);
-                        if (node2IssueMap.containsKey(index)) {
-                            selectIssue(node2IssueMap.get(index));
-                        } else if (node2CheckMap.containsKey(index)) {
-                            selectCheck(node2CheckMap.get(index));
-                        } else {
-                            selectIssue(null);
-                        }
-                    }
-                    updateDialogFields();
-                }
-
-            } catch (IllegalArgumentException ex) {
-                logger.log(Level.SEVERE, null, ex);
-            } catch (UnknownPropertyException ex) {
-                logger.log(Level.SEVERE, null, ex);
-            } catch (PropertyVetoException ex) {
-                logger.log(Level.SEVERE, null, ex);
-            } catch (WrappedTargetException ex) {
-                logger.log(Level.SEVERE, null, ex);
-            }
-        }
     }
 
     // XAdjustmentListener

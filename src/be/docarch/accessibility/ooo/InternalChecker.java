@@ -2,8 +2,7 @@ package be.docarch.accessibility.ooo;
 
 import java.io.File;
 import java.util.Date;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.HashMap;
@@ -24,7 +23,6 @@ import com.sun.star.graphic.XGraphic;
 import com.sun.star.text.XTextFramesSupplier;
 import com.sun.star.text.XTextGraphicObjectsSupplier;
 import com.sun.star.text.XTextEmbeddedObjectsSupplier;
-import com.sun.star.text.XTextEmbeddedObject;
 import com.sun.star.text.XTextFrame;
 import com.sun.star.text.XTextRange;
 import com.sun.star.text.XTextContent;
@@ -71,7 +69,9 @@ import be.docarch.accessibility.Checker;
 public class InternalChecker implements Checker {
 
     private Document document = null;
-    private TreeMap<InternalCheck.ID,XURI> checkURIs = null;
+    private Settings settings = null;
+    private TreeMap<String,Check> checks = null;
+    private TreeMap<String,XURI> checkURIs = null;
     private XNamedGraph currentGraph = null;
     private XResource currentAssertor = null;
     private SimpleDateFormat dateFormat = null;
@@ -82,7 +82,6 @@ public class InternalChecker implements Checker {
     private XTextViewCursor viewCursor = null;
     private XPageCursor pageCursor = null;
     private boolean modified = false;
-    private Set<Check> checks = null;
 
     private XURI CHECKER = null;
     private XURI CHECKER_CHECKS = null;
@@ -116,24 +115,14 @@ public class InternalChecker implements Checker {
     private XURI EARL_SUBJECT = null;
     private XURI EARL_ASSERTEDBY = null;
 
-
-    public InternalChecker() {
-        
-        dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
-    }
-
-    public InternalChecker(Document document) 
+    public InternalChecker(Document document)
                     throws IllegalArgumentException {
 
-        this();
-        setDocument(document);
-    }
-
-    public void setDocument(Document document)
-                     throws IllegalArgumentException {
+        dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
 
         this.document = document;
         XComponentContext xContext = document.xContext;
+        settings = new Settings(xContext);
 
         CHECKER = URI.create(xContext, URIs.CHECKER);
         CHECKER_CHECKS = URI.create(xContext, URIs.CHECKER_CHECKS);
@@ -167,30 +156,26 @@ public class InternalChecker implements Checker {
         EARL_FAILED = URI.create(xContext, URIs.EARL_FAILED);
         EARL_PASSED = URI.create(xContext, URIs.EARL_PASSED);
 
-        checkURIs = new TreeMap<InternalCheck.ID,XURI>();
-        for (InternalCheck.ID id : InternalCheck.ID.values()) {
-            checkURIs.put(id, URI.createNS(xContext, URIs.CHECKER_CHECKS, id.name()));
+        checkURIs = new TreeMap<String,XURI>();
+        checks = new TreeMap<String,Check>();
+
+        for (GeneralCheck.ID id : GeneralCheck.ID.values()) {
+            checks.put(id.name(), new GeneralCheck(id));
+            checkURIs.put(id.name(), URI.createNS(xContext, URIs.CHECKER_CHECKS, id.name()));
+        }
+
+        for (DaisyCheck.ID id : DaisyCheck.ID.values()) {
+            checks.put(id.name(), new DaisyCheck(id));
+            checkURIs.put(id.name(), URI.createNS(xContext, URIs.CHECKER_CHECKS, id.name()));
         }
     }
 
-    public Set<Check> getChecks() {
-
-        if (checks == null) {
-            checks = new HashSet<Check>();
-            for (InternalCheck.ID id : InternalCheck.ID.values()) {
-                checks.add(new InternalCheck(id));
-            }
-        }
-        return checks;
+    public Collection<Check> getChecks() {
+        return checks.values();
     }
 
     public Check getCheck(String identifier) {
-
-        try {
-            return new InternalCheck(InternalCheck.ID.valueOf(identifier));
-        } catch (java.lang.IllegalArgumentException ex) {
-            return null;
-        }
+        return (checks.get(identifier));
     }
 
     public File getAccessibilityReport() {
@@ -214,6 +199,7 @@ public class InternalChecker implements Checker {
 
         try {
 
+            settings.loadData();
             lastChecked = new Date();
             String graphName = getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(lastChecked) + ".rdf";
             XURI graphURI = null;
@@ -238,7 +224,7 @@ public class InternalChecker implements Checker {
             addStatement(currentAssertor, EARL_MAINASSERTOR, software);
             addStatement(currentAssertor, FOAF_MEMBER, bert);
 
-            for (InternalCheck.ID id : checkURIs.keySet()) {
+            for (String id : checkURIs.keySet()) {
                 addStatement(checkURIs.get(id), RDF_TYPE, EARL_TESTCASE);
             }
 
@@ -302,10 +288,10 @@ public class InternalChecker implements Checker {
         traverseEmbeddedObjects(embeddedObjects);
 
         // Attach general warnings to first paragraph
-        if (document.docProperties.getTitle().length() == 0) { metadata.add(checkURIs.get(InternalCheck.ID.A_EmptyTitleField)); }
-        if (docLocale.Language.equals("zxx")) { metadata.add(checkURIs.get(InternalCheck.ID.E_DefaultLanguage)); }
-        if (numberOfTitles == 0)   { metadata.add(checkURIs.get(InternalCheck.ID.A_NoTitle)); }
-        if (numberOfHeadings == 0) { metadata.add(checkURIs.get(InternalCheck.ID.A_NoHeadings)); }
+        if (document.docProperties.getTitle().length() == 0) { metadata.add(checkURIs.get(GeneralCheck.ID.A_EmptyTitleField.name())); }
+        if (docLocale.Language.equals("zxx")) { metadata.add(checkURIs.get(GeneralCheck.ID.E_DefaultLanguage.name())); }
+        if (numberOfTitles == 0)   { metadata.add(checkURIs.get(GeneralCheck.ID.A_NoTitle.name())); }
+        if (numberOfHeadings == 0) { metadata.add(checkURIs.get(GeneralCheck.ID.A_NoHeadings.name())); }
         if (metadata.size() > 0) {
             addMetadataToDocument(metadata);
         }
@@ -376,7 +362,7 @@ public class InternalChecker implements Checker {
 
                 if (caption != null && captionAfterTable && bigTable) {
                     ArrayList<XURI> meta = new ArrayList<XURI>();
-                    meta.add(checkURIs.get(InternalCheck.ID.A_CaptionBelowBigTable));
+                    meta.add(checkURIs.get(GeneralCheck.ID.A_CaptionBelowBigTable.name()));
                     addMetadataToParagraph(caption, meta);
                 }
 
@@ -394,30 +380,30 @@ public class InternalChecker implements Checker {
                 if (text.length() > 0) {
                     if (alignment == ParagraphAdjust.BLOCK_value ||
                         alignment == ParagraphAdjust.STRETCH_value) {
-                        metadata.add(checkURIs.get(InternalCheck.ID.A_JustifiedText));
+                        metadata.add(checkURIs.get(GeneralCheck.ID.A_JustifiedText.name()));
                     }
                 }
                 if (!inFrame && styleName.equals("Title")) {
                     if (text.length() == 0) {
-                        metadata.add(checkURIs.get(InternalCheck.ID.E_EmptyTitle));
+                        metadata.add(checkURIs.get(GeneralCheck.ID.E_EmptyTitle.name()));
                     } else {
                         numberOfTitles++;
                         if (numberOfTitles > 1) {
-                            metadata.add(checkURIs.get(InternalCheck.ID.E_ManyTitles));
+                            metadata.add(checkURIs.get(GeneralCheck.ID.E_ManyTitles.name()));
                         }
                     }
                 } else if (inFrame && newLevel > 0) {
-                    metadata.add(checkURIs.get(InternalCheck.ID.E_HeadingInFrame));
+                    metadata.add(checkURIs.get(GeneralCheck.ID.E_HeadingInFrame.name()));
                     currentLevel = newLevel;
                 } else if (newLevel > 0 && text.length() == 0) {
-                    metadata.add(checkURIs.get(InternalCheck.ID.E_EmptyHeading));
+                    metadata.add(checkURIs.get(GeneralCheck.ID.E_EmptyHeading.name()));
                 } else if (newLevel > currentLevel + 1) {
-                    metadata.add(checkURIs.get(InternalCheck.ID.E_HeadingSkip));
+                    metadata.add(checkURIs.get(GeneralCheck.ID.E_HeadingSkip.name()));
                     numberOfHeadings ++;
                     currentLevel = newLevel;
                 } else if (!alternateLevel && newLevel > 6) {
                     alternateLevel = true;
-                    metadata.add(checkURIs.get(InternalCheck.ID.A_AlternateLevel));
+                    metadata.add(checkURIs.get(GeneralCheck.ID.A_AlternateLevel.name()));
                     numberOfHeadings ++;
                     currentLevel = newLevel;
                 } else if (newLevel > 0) {
@@ -430,7 +416,7 @@ public class InternalChecker implements Checker {
                     if (caption != null && afterTable && bigTable) {
                         if (keepWithTableBefore || !keepWithNext) {
                             ArrayList<XURI> meta = new ArrayList<XURI>();
-                            meta.add(checkURIs.get(InternalCheck.ID.A_CaptionBelowBigTable));
+                            meta.add(checkURIs.get(GeneralCheck.ID.A_CaptionBelowBigTable.name()));
                             addMetadataToParagraph(caption, meta);
                             caption = null;
                         } else {
@@ -447,7 +433,7 @@ public class InternalChecker implements Checker {
                                            alignment == ParagraphAdjust.CENTER_value &&
                                            titleCentered;
                     if (fakeSubtitle) {
-                        metadata.add(checkURIs.get(InternalCheck.ID.A_NoSubtitle));
+                        metadata.add(checkURIs.get(GeneralCheck.ID.A_NoSubtitle.name()));
                     }
 
                     XEnumerationAccess enumerationAccess = (XEnumerationAccess)UnoRuntime.queryInterface(
@@ -485,7 +471,7 @@ public class InternalChecker implements Checker {
 
         if (caption != null && captionAfterTable) {
             ArrayList<XURI> meta = new ArrayList<XURI>();
-            meta.add(checkURIs.get(InternalCheck.ID.A_CaptionBelowBigTable));
+            meta.add(checkURIs.get(GeneralCheck.ID.A_CaptionBelowBigTable.name()));
             addMetadataToParagraph(caption, meta);
         }
 
@@ -671,7 +657,7 @@ public class InternalChecker implements Checker {
             }
             addMetadataToSpan(startTextMeta,
                               endTextMeta,
-                              checkURIs.get(InternalCheck.ID.A_SmallText),
+                              checkURIs.get(GeneralCheck.ID.A_SmallText.name()),
                               smallTextSamples.get(i));
         }
         for (int i=0; i<longUnderlineRanges.size(); i++) {
@@ -691,7 +677,7 @@ public class InternalChecker implements Checker {
             }
             addMetadataToSpan(startTextMeta,
                               endTextMeta,
-                              checkURIs.get(InternalCheck.ID.A_LongUnderline),
+                              checkURIs.get(GeneralCheck.ID.A_LongUnderline.name()),
                               longUnderlineSamples.get(i));
         }
         for (int i=0; i<longItalicRanges.size(); i++) {
@@ -711,14 +697,14 @@ public class InternalChecker implements Checker {
             }
             addMetadataToSpan(startTextMeta,
                               endTextMeta,
-                              checkURIs.get(InternalCheck.ID.A_LongItalic),
+                              checkURIs.get(GeneralCheck.ID.A_LongItalic.name()),
                               longItalicSamples.get(i));
         }
         if (checkNoSubtitle && (allBig || allBold)) {
-            metadata.add(checkURIs.get(InternalCheck.ID.A_NoSubtitle));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_NoSubtitle.name()));
         }
         if (checkFakeHeading && (allBig || allBold)) {
-            metadata.add(checkURIs.get(InternalCheck.ID.A_FakeHeading));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_FakeHeading.name()));
         }
     }
 
@@ -753,7 +739,7 @@ public class InternalChecker implements Checker {
                     endCaps = cursor.getEnd();
                 } else {
                     if (startCaps != null && numberOfWordsInCaps >= 3) {
-                        //addMetadataToSpan(startCaps, endCaps, checkURIs.get(InternalCheck.ID.A_AllCaps), capsSample);
+                        //addMetadataToSpan(startCaps, endCaps, checkURIs.get(GeneralCheck.ID.A_AllCaps), capsSample);
                     }
                     startCaps = null;
                 }
@@ -762,7 +748,7 @@ public class InternalChecker implements Checker {
         } while (cursor.gotoNextWord(false));
 
         if (startCaps != null && numberOfWordsInCaps >= 3) {
-            //addMetadataToSpan(startCaps, endCaps, checkURIs.get(InternalCheck.ID.A_AllCaps), capsSample);
+            //addMetadataToSpan(startCaps, endCaps, checkURIs.get(GeneralCheck.ID.A_AllCaps), capsSample);
         }
     }
 
@@ -815,19 +801,19 @@ public class InternalChecker implements Checker {
 	}
 
         if (inTable) {
-            metadata.add(checkURIs.get(InternalCheck.ID.A_NestedTable));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_NestedTable.name()));
         }
         if (!repeatTableHeading) {
-            metadata.add(checkURIs.get(InternalCheck.ID.A_NoTableHeading));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_NoTableHeading.name()));
         }
         if (!keepTableRowsTogether) {
-            metadata.add(checkURIs.get(InternalCheck.ID.A_BreakRows));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_BreakRows.name()));
         }
         if (pageRange[1] > pageRange[0] + 1) {
-            metadata.add(checkURIs.get(InternalCheck.ID.A_BigTable));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_BigTable.name()));
         }
         if (tableRows.getCount() * tableColumns.getCount() != cellNames.length) {    // Dit is geen waterdichte oplossing !
-            metadata.add(checkURIs.get(InternalCheck.ID.A_MergedCells));
+            metadata.add(checkURIs.get(GeneralCheck.ID.A_MergedCells.name()));
         }
 
         if (metadata.size() > 0) {
@@ -889,23 +875,26 @@ public class InternalChecker implements Checker {
             url = AnyConverter.toString(properties.getPropertyValue("GraphicURL"));
 
             if (title.length() + description.length() == 0) {
-                graphicMetadata.add(checkURIs.get(InternalCheck.ID.A_ImageWithoutAlt));
+                graphicMetadata.add(checkURIs.get(GeneralCheck.ID.A_ImageWithoutAlt.name()));
             }
             if (url.startsWith("vnd.sun.star.GraphicObject:")) {
-                graphic = (XGraphic)AnyConverter.toObject(
-                           XGraphic.class, properties.getPropertyValue("Graphic"));
-                mediaProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphic);
-                mimeType = AnyConverter.toString(mediaProperties.getPropertyValue("MimeType"));
-                if (!mimeType.equals("image/jpeg") &&
-                    !mimeType.equals("image/png")) {
-                    graphicMetadata.add(checkURIs.get(InternalCheck.ID.E_UnsupportedImageFormat));
+                if (settings.daisyChecksAvailable()) {
+                    graphic = (XGraphic)AnyConverter.toObject(
+                               XGraphic.class, properties.getPropertyValue("Graphic"));
+                    mediaProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphic);
+                    mimeType = AnyConverter.toString(mediaProperties.getPropertyValue("MimeType"));
+                    if (!mimeType.equals("image/jpeg") &&
+                        !mimeType.equals("image/png")) {
+                        graphicMetadata.add(checkURIs.get(DaisyCheck.ID.E_UnsupportedImageFormat.name()));
+                    }
                 }
             } else {
-                graphicMetadata.add(checkURIs.get(InternalCheck.ID.A_LinkedImage));
+                graphicMetadata.add(checkURIs.get(GeneralCheck.ID.A_LinkedImage.name()));
                 fileExtension = url.substring(url.lastIndexOf(".") + 1);
-                if (!fileExtension.equals("png") &&
+                if (settings.daisyChecksAvailable() &&
+                    !fileExtension.equals("png") &&
                     !fileExtension.equals("jpg")) {
-                    graphicMetadata.add(checkURIs.get(InternalCheck.ID.E_UnsupportedImageFormat));
+                    graphicMetadata.add(checkURIs.get(DaisyCheck.ID.E_UnsupportedImageFormat.name()));
                 }
             }
 
@@ -938,9 +927,9 @@ public class InternalChecker implements Checker {
 
             if (title.length() + description.length() == 0) {
                 if (AnyConverter.toString(properties.getPropertyValue("CLSID")).equals("078B7ABA-54FC-457F-8551-6147e776a997")) {
-                    addMetadataToObject(embeddedObject, checkURIs.get(InternalCheck.ID.A_FormulaWithoutAlt));
+                    addMetadataToObject(embeddedObject, checkURIs.get(GeneralCheck.ID.A_FormulaWithoutAlt.name()));
                 } else {
-                    addMetadataToObject(embeddedObject, checkURIs.get(InternalCheck.ID.A_ObjectWithoutAlt));
+                    addMetadataToObject(embeddedObject, checkURIs.get(GeneralCheck.ID.A_ObjectWithoutAlt.name()));
                 }
             }
         }
