@@ -65,11 +65,11 @@ public class FilterSorter implements java.util.Comparator<Issue> {
             return -1;
         } else if (entry2 == null) {
             return 1;
-        } else if (!entry1.isValid() && !entry2.isValid()) {
+        } else if (!entry1.valid() && !entry2.valid()) {
             return 0;
-        } else if (!entry1.isValid()) {
+        } else if (!entry1.valid()) {
             return -1;
-        } else if (!entry2.isValid()) {
+        } else if (!entry2.valid()) {
             return 1;
         }
 
@@ -109,7 +109,7 @@ public class FilterSorter implements java.util.Comparator<Issue> {
     public boolean accept(Issue entry) {
 
         if (entry != null) {
-            return entry.isValid();
+            return entry.valid();
         } else {
             return false;
         }

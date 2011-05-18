@@ -2,12 +2,14 @@ package be.docarch.accessibility.ooo.toolpanel;
 
 import java.util.logging.Logger;
 import java.util.logging.Level;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.ServiceLoader;
+import java.util.ResourceBundle;
 import java.net.URLClassLoader;
 import java.net.URL;
 import java.io.File;
@@ -88,7 +90,23 @@ public class AccessibilityPanel extends ComponentBase
                                         XAdjustmentListener,
                                         XSelectionChangeListener {
 
-    private static final Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
+
+    private static Locale locale;
+    private static ResourceBundle bundle;
+
+    private static String L10N_errors;
+    private static String L10N_warnings;
+    private static String L10N_issue;
+    private static String L10N_description;
+    private static String L10N_suggestions;
+    private static String L10N_clear;
+    private static String L10N_ignore;
+    private static String L10N_ignoreAll;
+    private static String L10N_repair;
+    private static String L10N_repairAll;
+    private static String L10N_recheck;
+    private static String L10N_moreHelp;
 
     private Rectangle[] controlRectangles = new Rectangle[13];
 
@@ -151,6 +169,7 @@ public class AccessibilityPanel extends ComponentBase
     private HashMap<Check,XMutableTreeNode> check2NodeMap = null;
     private HashMap<Integer,Issue> node2IssueMap = null;
     private HashMap<Integer,Check> node2CheckMap = null;
+    private HashMap<Integer,XMutableTreeNode> child2ParentMap = null; // (XMutableTreeNode)node.getParent(); => randomly results in ClassCastException ?
 
     private boolean ignoreSelectionEvent = false;
     private boolean showRepairedIssues = false;
@@ -159,6 +178,28 @@ public class AccessibilityPanel extends ComponentBase
                               XWindow panelAnchorWindow) {
 
         logger.entering("AccessibilityPanel", "<init>");
+
+        try {
+            locale = new Locale(UnoUtils.getUILocale(xContext));
+            Locale.setDefault(locale);
+        } catch (com.sun.star.uno.Exception ex) {
+            logger.log(Level.SEVERE, null, ex);
+            locale = Locale.getDefault();
+        }
+        bundle = ResourceBundle.getBundle("be/docarch/accessibility/ooo/toolpanel/l10n/toolpanel", locale);
+
+        L10N_errors = bundle.getString("errors");
+        L10N_warnings = bundle.getString("warnings");
+        L10N_issue = bundle.getString("issue");
+        L10N_description = bundle.getString("description");
+        L10N_suggestions = bundle.getString("suggestions");
+        L10N_clear = bundle.getString("clear");
+        L10N_ignore = bundle.getString("ignore");
+        L10N_ignoreAll = bundle.getString("ignoreAll");
+        L10N_repair = bundle.getString("repair");
+        L10N_repairAll = bundle.getString("repairAll");
+        L10N_recheck = bundle.getString("recheck");
+        L10N_moreHelp = bundle.getString("moreHelp");
 
         try {
 
@@ -296,12 +337,12 @@ public class AccessibilityPanel extends ComponentBase
                                          mainRectangle.Width,  mainRectangle.Height,
                                          totalRectangle.Width, totalRectangle.Height);
 
-                        nameLabel.setText("Issue:");
-                        descriptionLabel.setText("Description:");
-                        suggestionLabel.setText("Suggestions:");
-                        clearButton.setLabel("Clear");
-                        refreshButton.setLabel("Recheck");
-                        helpButton.setLabel("More help");
+                        nameLabel.setText(L10N_issue + ":");
+                        descriptionLabel.setText(L10N_description + ":");
+                        suggestionLabel.setText(L10N_suggestions + ":");
+                        clearButton.setLabel(L10N_clear);
+                        refreshButton.setLabel(L10N_recheck);
+                        helpButton.setLabel(L10N_moreHelp);
                         
                         initialize();
                     }
@@ -476,7 +517,6 @@ public class AccessibilityPanel extends ComponentBase
                 URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[urls.size()]), ExternalChecker.class.getClassLoader());                
                 for (ExternalChecker checker : ServiceLoader.load(ExternalChecker.class, classLoader)) {
                     externalCheckers.add(checker);
-                    break;
                 }
             }
 
@@ -492,6 +532,7 @@ public class AccessibilityPanel extends ComponentBase
             check2NodeMap = new HashMap<Check,XMutableTreeNode>();
             node2IssueMap = new HashMap<Integer,Issue>();
             node2CheckMap = new HashMap<Integer,Check>();
+            child2ParentMap = new HashMap<Integer,XMutableTreeNode>();
 
             window.addWindowListener(this);
             hScrollBar.addAdjustmentListener(this);
@@ -502,7 +543,7 @@ public class AccessibilityPanel extends ComponentBase
             ignoreButton.addActionListener(this);
             treeControl.addSelectionChangeListener(this);
 
-            manager.selectIssue(null);
+            manager.select(null);
 
             buildTreeView();
             updateDialogFields();
@@ -550,17 +591,17 @@ public class AccessibilityPanel extends ComponentBase
         manager.refresh();
 
         currentFocus = null;
-        Issue oldIssue = manager.getSelectedIssue();
-        Check oldCheck = manager.getSelectedCheck();
+        Issue oldIssue = manager.selectedIssue();
+        Check oldCheck = manager.selectedCheck();
 
-        manager.selectIssue(null);
+        manager.select(null);
 
         buildTreeView();
 
-        if (selectIssueNode(oldIssue)) {
-            manager.selectIssue(oldIssue);
-        } else if (selectCheckNode(oldCheck)) {
-            manager.selectCheck(oldCheck);
+        if (selectNode(oldIssue)) {
+            manager.select(oldIssue);
+        } else if (selectNode(oldCheck)) {
+            manager.select(oldCheck);
         } else {
             treeControl.clearSelection();
         }
@@ -575,34 +616,33 @@ public class AccessibilityPanel extends ComponentBase
 
     }
 
-    private boolean selectCheckNode(Check check)
-                             throws IllegalArgumentException,
-                                    ExpandVetoException {
+    private boolean selectNode(Object o)
+                        throws IllegalArgumentException,
+                               ExpandVetoException {
 
-        if (check2NodeMap.containsKey(check)) {
-            ignoreSelectionEvent = true;
-            treeControl.makeNodeVisible(check2NodeMap.get(check));
-            treeControl.select(check2NodeMap.get(check));
-            ignoreSelectionEvent = false;
-            return true;
-        } else {
-            return false;
+        if (o != null) {
+            if (o instanceof Check) {
+                Check check = (Check)o;
+                if (check2NodeMap.containsKey(check)) {
+                    ignoreSelectionEvent = true;
+                    treeControl.makeNodeVisible(check2NodeMap.get(check));
+                    treeControl.select(check2NodeMap.get(check));
+                    ignoreSelectionEvent = false;
+                    return true;
+                }
+            } else if (o instanceof Issue) {
+                Issue issue = (Issue)o;
+                if (issue2NodeMap.containsKey(issue)) {
+                    ignoreSelectionEvent = true;
+                    treeControl.makeNodeVisible(issue2NodeMap.get(issue));
+                    treeControl.select(issue2NodeMap.get(issue));
+                    ignoreSelectionEvent = false;
+                    return true;
+                }
+            }
         }
-    }
 
-    private boolean selectIssueNode(Issue issue)
-                             throws IllegalArgumentException,
-                                    ExpandVetoException {
-
-        if (issue2NodeMap.containsKey(issue)) {
-            ignoreSelectionEvent = true;            
-            treeControl.makeNodeVisible(issue2NodeMap.get(issue));
-            treeControl.select(issue2NodeMap.get(issue));
-            ignoreSelectionEvent = false;
-            return true;
-        } else {
-            return false;
-        }
+        return false;
     }
 
     private void clear() throws IllegalArgumentException,
@@ -617,7 +657,7 @@ public class AccessibilityPanel extends ComponentBase
 
         manager.clear();
 
-        manager.selectIssue(null);        
+        manager.select(null);        
         buildTreeView();
         updateDialogFields();
         updateFocus();
@@ -638,49 +678,60 @@ public class AccessibilityPanel extends ComponentBase
         check2NodeMap.clear();
         node2IssueMap.clear();
         node2CheckMap.clear();
+        child2ParentMap.clear();
 
-        int index = 0;
+        int i = 0;
+        int checkNodeValue;
+        int issueNodeValue;
         List<Issue> issueList;
         XMutableTreeNode issueNode;
         XMutableTreeNode checkNode;
         XMutableTreeNode rootNode = dataModel.createNode("root", true);
-        XMutableTreeNode warningsNode = dataModel.createNode("WARNINGS", true);
-        XMutableTreeNode errorsNode = dataModel.createNode("ERRORS", true);
+        XMutableTreeNode warningsNode = dataModel.createNode(L10N_warnings.toUpperCase(), true);
+        XMutableTreeNode errorsNode = dataModel.createNode(L10N_errors.toUpperCase(), true);
         dataModel.setRoot(rootNode);
 
         for (Check check : manager.getChecks()) {
             
             issueList = manager.getIssuesByCheck(check);
+            checkNodeValue = i++;
+
             if (issueList.size() == 1 &&
                 issueList.get(0).getElement().getType() == Element.Type.DOCUMENT) {
                 checkNode = dataModel.createNode("", false);
-                checkNode.setDataValue(new Any(Type.LONG, index));
-                node2IssueMap.put(index++, issueList.get(0));
+                checkNode.setDataValue(new Any(Type.LONG, checkNodeValue));
+                node2IssueMap.put(checkNodeValue, issueList.get(0));
                 issue2NodeMap.put(issueList.get(0), checkNode);
                 check2NodeMap.put(check, checkNode);
             } else {
                 checkNode = dataModel.createNode("", true);
-                checkNode.setDataValue(new Any(Type.LONG, index));
-                node2CheckMap.put(index++, check);
+                checkNode.setDataValue(new Any(Type.LONG, checkNodeValue));
+                node2CheckMap.put(checkNodeValue, check);
                 check2NodeMap.put(check, checkNode);
                 for (Issue issue : issueList) {
                     issueNode = dataModel.createNode(issue.getName(), false);
-                    issueNode.setDataValue(new Any(Type.LONG, index));
-                    node2IssueMap.put(index++, issue);
+                    issueNodeValue = i++;
+                    issueNode.setDataValue(new Any(Type.LONG, issueNodeValue));
+                    node2IssueMap.put(issueNodeValue, issue);
                     issue2NodeMap.put(issue, issueNode);
                     checkNode.appendChild(issueNode);
-                    updateIssueNode(issue);
+                    child2ParentMap.put(issueNodeValue, checkNode);
+                    updateNode(issue);
                 }
             }
 
             switch (check.getStatus()) {
                 case ERROR:
-                    errorsNode.appendChild(checkNode); break;
+                    errorsNode.appendChild(checkNode);
+                    child2ParentMap.put(checkNodeValue, errorsNode);
+                    break;
                 case ALERT:
-                    warningsNode.appendChild(checkNode); break;
+                    warningsNode.appendChild(checkNode);
+                    child2ParentMap.put(checkNodeValue, warningsNode);
+                    break;
             }
 
-            updateCheckNode(check);            
+            updateNode(check);
         }
 
         if (errorsNode.getChildCount()>0) {
@@ -712,8 +763,8 @@ public class AccessibilityPanel extends ComponentBase
                                              WrappedTargetException,
                                              IllegalArgumentException {
 
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         String image = "";
         IssueManager.Status status = null;
@@ -750,12 +801,12 @@ public class AccessibilityPanel extends ComponentBase
 
     private void updateFocus() {
 
-        Issue selectedIssue = manager.getSelectedIssue();
+        Issue selectedIssue = manager.selectedIssue();
 
         try {
 
             if (selectedIssue == null) {
-                removeSelection();
+                //removeSelection();
             } else if (currentFocus == null) {
                 focus(selectedIssue.getElement());
             } else if (!selectedIssue.getElement().equals(currentFocus.getElement())) {
@@ -778,16 +829,16 @@ public class AccessibilityPanel extends ComponentBase
                                         WrappedTargetException,
                                         IllegalArgumentException {
 
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         boolean repair = false;
         boolean ignore = false;
 
         if (selectedIssue != null) {
-            ignoreButton.setLabel("Ignore");
-            repairButton.setLabel("Repair");
-            if (!selectedIssue.isRepaired() && !selectedIssue.isIgnored()) {
+            ignoreButton.setLabel(L10N_ignore);
+            repairButton.setLabel(L10N_repair);
+            if (!selectedIssue.repaired() && !selectedIssue.ignored()) {
                 ignore = true;
                 if (selectedCheck.getRepairMode() == Check.RepairMode.AUTO ||
                     selectedCheck.getRepairMode() == Check.RepairMode.SEMI_AUTOMATED) {
@@ -795,8 +846,8 @@ public class AccessibilityPanel extends ComponentBase
                 }
             }
         } else {
-            ignoreButton.setLabel("Ignore All");
-            repairButton.setLabel("Repair All");
+            ignoreButton.setLabel(L10N_ignoreAll);
+            repairButton.setLabel(L10N_repairAll);
             if (selectedCheck != null) {
                 IssueManager.Status status = manager.getCheckStatus(selectedCheck);
                 if (status != IssueManager.Status.REPAIRED &&
@@ -823,12 +874,14 @@ public class AccessibilityPanel extends ComponentBase
         }
     }
 
-    private boolean updateCheckNode(Check check)
-                             throws IllegalArgumentException {
+    private boolean updateNode(Check check)
+                        throws IllegalArgumentException {
 
         XMutableTreeNode node = check2NodeMap.get(check);
         if (node == null) { return false; }
-        XMutableTreeNode parent = (XMutableTreeNode)node.getParent();
+        Object d = node.getDataValue();
+        if (d == null || AnyConverter.isVoid(d)) { return false; }
+        XMutableTreeNode parent = child2ParentMap.get(AnyConverter.toInt(d));
         if (parent == null) { return false; }
 
         String image = "";
@@ -842,7 +895,9 @@ public class AccessibilityPanel extends ComponentBase
                 if (!showRepairedIssues) {
                     try {
                         check2NodeMap.remove(check);
+                        ignoreSelectionEvent = true;
                         parent.removeChildByIndex(parent.getIndex(node));
+                        ignoreSelectionEvent = false;
                         return false;
                     } catch (IndexOutOfBoundsException e) {
                     }
@@ -873,12 +928,14 @@ public class AccessibilityPanel extends ComponentBase
         return true;
     }
 
-    private boolean updateIssueNode(Issue issue)
-                             throws IllegalArgumentException {
+    private boolean updateNode(Issue issue)
+                        throws IllegalArgumentException {
 
         XMutableTreeNode node = issue2NodeMap.get(issue);
         if (node == null) { return false; }
-        XMutableTreeNode parent = (XMutableTreeNode)node.getParent();
+        Object d = node.getDataValue();
+        if (d == null || AnyConverter.isVoid(d)) { return false; }
+        XMutableTreeNode parent = child2ParentMap.get(AnyConverter.toInt(d));
         if (parent == null) { return false; }
 
         String image = "";
@@ -893,7 +950,9 @@ public class AccessibilityPanel extends ComponentBase
                         if (issue.getElement().getType() == Element.Type.DOCUMENT) {
                             check2NodeMap.remove(issue.getCheck());
                         }
+                        ignoreSelectionEvent = true;
                         parent.removeChildByIndex(parent.getIndex(node));
+                        ignoreSelectionEvent = false;
                         return false;
                     } catch (IndexOutOfBoundsException e) {
                     }
@@ -985,8 +1044,8 @@ public class AccessibilityPanel extends ComponentBase
     public void actionPerformed(ActionEvent actionEvent) {
 
         Object source = actionEvent.Source;
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         try {
 
@@ -1001,23 +1060,27 @@ public class AccessibilityPanel extends ComponentBase
             } else if (source.equals(ignoreButton)) {
 
                 if (selectedIssue != null) {
-                    selectedIssue.setIgnored(true);
-                    if (!updateIssueNode(selectedIssue)) {
-                        manager.selectCheck(selectedIssue.getCheck());
-                        selectCheckNode(manager.getSelectedCheck());
+                    selectedIssue.ignored(true);
+                    if (!updateNode(selectedIssue)) {
+                        manager.select(selectedIssue.getCheck());
+                        selectNode(manager.selectedCheck());
                     }
-                    if (!updateCheckNode(manager.getSelectedCheck())) {
-                        manager.selectCheck(null);
+                    if (!updateNode(manager.selectedCheck())) {
+                        manager.select(null);
+                        ignoreSelectionEvent = true;
                         treeControl.clearSelection();
+                        ignoreSelectionEvent = false;
                     }                    
                 } else if (selectedCheck != null) {
                     for (Issue issue : manager.getIssuesByCheck(selectedCheck)) {
-                        issue.setIgnored(true);
-                        updateIssueNode(issue);
+                        issue.ignored(true);
+                        updateNode(issue);
                     }
-                    if (!updateCheckNode(selectedCheck)) {
-                        manager.selectCheck(null);
+                    if (!updateNode(selectedCheck)) {
+                        manager.select(null);
+                        ignoreSelectionEvent = true;
                         treeControl.clearSelection();
+                        ignoreSelectionEvent = false;
                     }
                 }
                 updateDialogFields();
@@ -1026,30 +1089,34 @@ public class AccessibilityPanel extends ComponentBase
             } else if (source.equals(repairButton)) {
 
                 if (selectedIssue != null) {
-                    if (selectedIssue.repair()) {
-                        if (!updateIssueNode(selectedIssue)) {
-                            manager.selectCheck(selectedIssue.getCheck());
-                            selectCheckNode(manager.getSelectedCheck());
+                    if (manager.repair(selectedIssue)) {
+                        if (!updateNode(selectedIssue)) {
+                            manager.select(selectedIssue.getCheck());
+                            selectNode(manager.selectedCheck());
                         }
-                        if (!updateCheckNode(manager.getSelectedCheck())) {
-                            manager.selectCheck(null);
+                        if (!updateNode(manager.selectedCheck())) {
+                            manager.select(null);
+                            ignoreSelectionEvent = true;
                             treeControl.clearSelection();
+                            ignoreSelectionEvent = false;
                         }
                     }
                 } else if (selectedCheck != null) {
                     boolean repaired = false;
                     for (Issue issue : manager.getIssuesByCheck(selectedCheck)) {
-                        if (!issue.isRepaired() && !issue.isIgnored()) {
-                            if (issue.repair()) {
+                        if (!issue.repaired() && !issue.ignored()) {
+                            if (manager.repair(issue)) {
                                 repaired = true;
-                                updateIssueNode(issue);
+                                updateNode(issue);
                             }
                         }
                     }
                     if (repaired) {
-                        if (!updateCheckNode(selectedCheck)) {
-                            manager.selectCheck(null);
+                        if (!updateNode(selectedCheck)) {
+                            manager.select(null);
+                            ignoreSelectionEvent = true;
                             treeControl.clearSelection();
+                            ignoreSelectionEvent = false;
                         }
                     }
                 }
@@ -1098,14 +1165,14 @@ public class AccessibilityPanel extends ComponentBase
                     if (d != null && !AnyConverter.isVoid(d)) {
                         int index = AnyConverter.toInt(d);
                         if (node2IssueMap.containsKey(index)) {
-                            manager.selectIssue(node2IssueMap.get(index));
+                            manager.select(node2IssueMap.get(index));
                         } else if (node2CheckMap.containsKey(index)) {
-                            manager.selectCheck(node2CheckMap.get(index));
+                            manager.select(node2CheckMap.get(index));
                         } else {
-                            manager.selectIssue(null);
+                            manager.select(null);
                         }
                     } else {
-                        manager.selectIssue(null);
+                        manager.select(null);
                     }
                     updateDialogFields();
                     updateFocus();

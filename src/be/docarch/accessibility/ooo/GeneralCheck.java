@@ -12,9 +12,7 @@ import be.docarch.accessibility.Check;
 public class GeneralCheck extends Check {
 
     private static Locale locale = Locale.getDefault();
-    private static ResourceBundle names = ResourceBundle.getBundle("be/docarch/accessibility/l10n/names", locale);
-    private static ResourceBundle descriptions = ResourceBundle.getBundle("be/docarch/accessibility/l10n/descriptions", locale);
-    private static ResourceBundle suggestions = ResourceBundle.getBundle("be/docarch/accessibility/l10n/suggestions", locale);
+    private static ResourceBundle bundle = ResourceBundle.getBundle("be/docarch/accessibility/l10n/Bundle", locale);
 
     public static enum ID {
                                     // Hele document    Paragraaf      Stukje tekst      Tabel      Image/Object
@@ -54,7 +52,6 @@ public class GeneralCheck extends Check {
         A_AllCaps,                  // voorlopig genegeerd
         A_LongUnderline,
         A_LongItalic,
-        A_EmptyTitleField,
         A_NoTitle
         
     }
@@ -108,7 +105,6 @@ public class GeneralCheck extends Check {
             case A_AllCaps:
             case A_LongUnderline:
             case A_LongItalic:
-            case A_EmptyTitleField:
             case A_FakeHeading:
             case A_FakeQuote:
                 return Status.ALERT;
@@ -132,7 +128,6 @@ public class GeneralCheck extends Check {
             case E_HeadingInSection:
             case A_NoHeadings:
             case A_AlternateLevel:
-            case A_EmptyTitleField:
             case A_FakeHeading:
                 return Category.HEADINGS;
             case E_DefaultLanguage:
@@ -175,8 +170,8 @@ public class GeneralCheck extends Check {
 
         if (identifier == null) {
             return null;
-        } else if (names.containsKey(identifier.name())) {
-            return names.getString(identifier.name());
+        } else if (bundle.containsKey("name_" + identifier.name())) {
+            return bundle.getString("name_" + identifier.name());
         } else {
             return identifier.name();
         }
@@ -186,19 +181,19 @@ public class GeneralCheck extends Check {
 
         if (identifier == null) {
             return null;
-        } else if (descriptions.containsKey(identifier.name())) {
-            return descriptions.getString(identifier.name());
+        } else if (bundle.containsKey("description_" + identifier.name())) {
+            return bundle.getString("description_" + identifier.name());
         } else {
             return identifier.name();
         }
     }
 
     public String getSuggestion() {
-
+        
         if (identifier == null) {
             return null;
-        } else if (suggestions.containsKey(identifier.name())) {
-            return suggestions.getString(identifier.name());
+        } else if (bundle.containsKey("suggestion_" + identifier.name())) {
+            return bundle.getString("suggestion_" + identifier.name());
         } else {
             return identifier.name();
         }
@@ -210,7 +205,6 @@ public class GeneralCheck extends Check {
             case A_ImageWithoutAlt:
             case A_FormulaWithoutAlt:
             case A_ObjectWithoutAlt:
-            case A_EmptyTitleField:
             case E_DefaultLanguage:
             case A_NoTableHeading:
                 return RepairMode.SEMI_AUTOMATED;

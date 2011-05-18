@@ -36,6 +36,7 @@ import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.container.ElementExistException;
 import com.sun.star.container.NoSuchElementException;
 
+import be.docarch.accessibility.Constants;
 
 /**
  *
@@ -43,7 +44,7 @@ import com.sun.star.container.NoSuchElementException;
  */
 public class UnoGUI {
 
-    private static final Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
 
     private XComponentContext xContext = null;
     private XFrame xFrame = null;

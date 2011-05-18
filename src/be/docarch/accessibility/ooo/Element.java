@@ -1,7 +1,6 @@
 package be.docarch.accessibility.ooo;
 
 import java.util.logging.Logger;
-import java.util.logging.Level;
 
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.uno.UnoRuntime;
@@ -27,8 +26,7 @@ import com.sun.star.rdf.RepositoryException;
 import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.IllegalArgumentException;
 
-import be.docarch.accessibility.URIs;
-
+import be.docarch.accessibility.Constants;
 
 /**
  *
@@ -36,7 +34,7 @@ import be.docarch.accessibility.URIs;
  */
 public class Element {
 
-    private final static Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
 
     public static enum Type { DOCUMENT,
                               PARAGRAPH,
@@ -52,12 +50,6 @@ public class Element {
     private static XNameAccess embeddedObjects = null;
     private static XNameAccess graphicObjects = null;
 
-    private static XURI RDF_TYPE = null;
-    private static XURI CHECKER_START = null;
-    private static XURI CHECKER_END = null;
-    private static XURI CHECKER_NAME = null;
-    private static XURI CHECKER_SAMPLE = null;
-
     private boolean exists = false;
     private Type type = Type.OTHER;
     private String id = "";
@@ -70,8 +62,8 @@ public class Element {
     private XNamed embeddedObject = null;
 
 
-    static void setDocument(Document document)
-                     throws IllegalArgumentException {
+    static void init(Document document)
+              throws IllegalArgumentException {
 
         Element.xContext = document.xContext;
         Element.xDMA = document.xDMA;
@@ -90,12 +82,6 @@ public class Element {
         embeddedObjects = textEmbeddedObjectsSupplier.getEmbeddedObjects();
         graphicObjects = textGraphicObjectsSupplier.getGraphicObjects();
 
-        RDF_TYPE = URI.create(xContext, URIs.RDF_TYPE);
-        CHECKER_START = URI.create(xContext, URIs.CHECKER_START);
-        CHECKER_END = URI.create(xContext, URIs.CHECKER_END);
-        CHECKER_NAME = URI.create(xContext, URIs.CHECKER_NAME);
-        CHECKER_SAMPLE = URI.create(xContext, URIs.CHECKER_SAMPLE);
-
     }
 
     public Element(XResource testsubject)
@@ -106,21 +92,21 @@ public class Element {
 
         logger.entering("Element", "<init>");
 
-        XEnumeration types = xRepository.getStatements(testsubject, RDF_TYPE, null);
+        XEnumeration types = xRepository.getStatements(testsubject, URIs.RDF_TYPE, null);
 
         if (types.hasMoreElements()) {
             String t = ((Statement)types.nextElement()).Object.getStringValue();
             if (t == null) {
                 type = Type.OTHER;
-            } else if (t.equals(URIs.CHECKER_DOCUMENT)) {
+            } else if (t.equals(Constants.CHECKER_DOCUMENT)) {
                 type = Type.DOCUMENT;
-            } else if (t.equals(URIs.CHECKER_PARAGRAPH)) {
+            } else if (t.equals(Constants.CHECKER_PARAGRAPH)) {
                 type = Type.PARAGRAPH;
-            } else if (t.equals(URIs.CHECKER_SPAN)) {
+            } else if (t.equals(Constants.CHECKER_SPAN)) {
                 type = Type.SPAN;
-            } else if (t.equals(URIs.CHECKER_TABLE)) {
+            } else if (t.equals(Constants.CHECKER_TABLE)) {
                 type = Type.TABLE;
-            } else if (t.equals(URIs.CHECKER_OBJECT)) {
+            } else if (t.equals(Constants.CHECKER_OBJECT)) {
                 type = Type.OBJECT;
             } else {
                 type = Type.OTHER;
@@ -140,7 +126,7 @@ public class Element {
                 break;
 
             case PARAGRAPH:
-                starts = xRepository.getStatements(testsubject, CHECKER_START, null);
+                starts = xRepository.getStatements(testsubject, URIs.CHECKER_START, null);
                 if (starts.hasMoreElements()) {
                     XURI start = URI.create(xContext, ((Statement)starts.nextElement()).Object.getStringValue());
                     XMetadatable element = xDMA.getElementByURI(start);
@@ -162,9 +148,9 @@ public class Element {
                 break;
 
             case SPAN:
-                starts = xRepository.getStatements(testsubject, CHECKER_START, null);
-                ends = xRepository.getStatements(testsubject, CHECKER_END, null);
-                samples = xRepository.getStatements(testsubject, CHECKER_SAMPLE, null);
+                starts = xRepository.getStatements(testsubject, URIs.CHECKER_START, null);
+                ends = xRepository.getStatements(testsubject, URIs.CHECKER_END, null);
+                samples = xRepository.getStatements(testsubject, URIs.CHECKER_SAMPLE, null);
                 if (starts.hasMoreElements() && ends.hasMoreElements()) {
                     XURI start = URI.create(xContext, ((Statement)starts.nextElement()).Object.getStringValue());
                     XURI end = URI.create(xContext, ((Statement)ends.nextElement()).Object.getStringValue());
@@ -192,7 +178,7 @@ public class Element {
                 break;
 
             case TABLE:
-                names = xRepository.getStatements(testsubject, CHECKER_NAME, null);
+                names = xRepository.getStatements(testsubject, URIs.CHECKER_NAME, null);
                 if (names.hasMoreElements()) {
                     id = ((Statement)names.nextElement()).Object.getStringValue();
                     try {
@@ -205,7 +191,7 @@ public class Element {
                 break;
 
             case OBJECT:
-                names = xRepository.getStatements(testsubject, CHECKER_NAME, null);
+                names = xRepository.getStatements(testsubject, URIs.CHECKER_NAME, null);
                 if (names.hasMoreElements()) {
                     id = ((Statement)names.nextElement()).Object.getStringValue();
                     Object element = null;

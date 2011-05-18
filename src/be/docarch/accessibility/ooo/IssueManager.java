@@ -4,17 +4,20 @@ import java.util.Date;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.HashMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.io.File;
-import java.text.SimpleDateFormat;
+
+import java.text.ParseException;
+import java.io.IOException;
 
 import com.sun.star.lang.EventObject;
 import com.sun.star.container.XEnumeration;
 import com.sun.star.rdf.Statement;
 import com.sun.star.rdf.XURI;
-import com.sun.star.rdf.URI;
 import com.sun.star.rdf.XResource;
 import com.sun.star.rdf.XRepository;
 import com.sun.star.rdf.XNamedGraph;
@@ -26,10 +29,11 @@ import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.PropertyVetoException;
 
-import be.docarch.accessibility.URIs;
 import be.docarch.accessibility.Check;
 import be.docarch.accessibility.Checker;
 import be.docarch.accessibility.ExternalChecker;
+import be.docarch.accessibility.Constants;
+import be.docarch.accessibility.Report;
 
 /**
  *
@@ -37,25 +41,25 @@ import be.docarch.accessibility.ExternalChecker;
  */
 public class IssueManager {
 
-    private final static Logger logger = Logger.getLogger("be.docarch.accessibility");
-
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
+    private static final String TMP_NAME = Constants.TMP_PREFIX;
+    private static final File TMP_DIR = Constants.getTmpDirectory();
+    
     public static enum Status { ALERT, ERROR, REPAIRED, IGNORED };
-
-    private XURI RDF_TYPE = null;
-    private XURI EARL_ASSERTION = null;
-    private XURI CHECKER = null;
 
     private Document document = null;
     private Settings settings = null;
     private InternalChecker internalChecker = null;
     private List<ExternalChecker> externalCheckers = null;
+    private Repairer repairer = null;
 
-    private ArrayList<Issue> allIssues = null;
+    private List<Issue> allIssues = null;
     private FilterSorter filterSorter = null;
     private Issue selectedIssue = null;
     private Check selectedCheck = null;
-    private HashMap<Check,List<Issue>> check2IssuesMap = null;
-
+    private Map<Check,List<Issue>> check2IssuesMap = null;
+    //private Map<Check,Checker> check2checkerMap = null;
+    //private Map<Check,Repairer> check2repairerMap = null;
 
     public IssueManager(Document document,
                         InternalChecker internalChecker,
@@ -65,36 +69,41 @@ public class IssueManager {
                         RepositoryException,
                         PropertyVetoException,
                         WrappedTargetException,
-                        com.sun.star.uno.Exception,
-                        java.text.ParseException {
+                        ParseException,
+                        com.sun.star.uno.Exception {
     
         logger.entering("IssueManager", "<init>");
 
         this.document = document;
         this.internalChecker = internalChecker;
         this.externalCheckers = externalCheckers;
-        this.settings = new Settings(document.xContext);
+        settings = new Settings(document.xContext);
+        repairer = new InternalRepairer(document);
 
-        Checker[] allCheckers = new Checker[1 + externalCheckers.size()];
-        allCheckers[0] = internalChecker;
-        for (int i=0; i<externalCheckers.size(); i++) {
-            allCheckers[i+1] = externalCheckers.get(i);
+        //check2checkerMap = new HashMap<Check,Checker>();
+        //check2repairerMap = new HashMap<Check,Repairer>();
+
+        Map<String,Check> checks = new TreeMap<String,Check>();
+        for (Check check : internalChecker.getChecks()) {
+            checks.put(check.getIdentifier(), check);
+            //check2checkerMap.put(check, internalChecker);
         }
-
-        Issue.setDocument(document, allCheckers);
+        for (Checker checker : externalCheckers) {
+            for (Check check : checker.getChecks()) {
+                checks.put(check.getIdentifier(), check);
+                //check2checkerMap.put(check, checker);
+            }
+        }
+        Issue.init(document, checks);
 
         check2IssuesMap = new HashMap<Check,List<Issue>>();
-
-        RDF_TYPE = URI.create(document.xContext, URIs.RDF_TYPE);
-        EARL_ASSERTION = URI.create(document.xContext, URIs.EARL_ASSERTION);
-        CHECKER = URI.create(document.xContext, URIs.CHECKER);
 
         filterSorter = new FilterSorter();
         filterSorter.setOrderPriority(FilterSorter.NAME, true);
         filterSorter.setOrderPriority(FilterSorter.CHECKID, true);
         filterSorter.setOrderPriority(FilterSorter.CATEGORY, true);
         allIssues = new ArrayList<Issue>();
-
+        
         // Load accessibility issues from metadata
         loadMetadata();
 
@@ -108,8 +117,8 @@ public class IssueManager {
                                  NoSuchElementException,
                                  WrappedTargetException,
                                  PropertyVetoException,
-                                 java.text.ParseException,
-                                 java.io.IOException,
+                                 ParseException,
+                                 IOException,
                                  com.sun.star.uno.Exception {
 
         // Extract accessibility issues from document and store in metadata
@@ -117,17 +126,23 @@ public class IssueManager {
 
         // Get external accessibility reports and store in metadata
         settings.loadData();
-        if (settings.brailleChecks()) {
-            if (externalCheckers.size() > 0) {
-                File odtFile = File.createTempFile("accessibility", ".odt");
+        File odtFile = null;
+
+        for (ExternalChecker checker : externalCheckers) {
+            if (!settings.brailleChecks() && checker.getIdentifier().startsWith("be.docarch.odt2braille")) {
+                break;
+            }
+            if (odtFile == null) {
+                odtFile = File.createTempFile(TMP_NAME, ".odt", TMP_DIR);
                 odtFile.deleteOnExit();
                 document.ensureMetadataReferences();
                 document.storeToFile(odtFile);
-                for (ExternalChecker checker : externalCheckers) {
-                    checker.setOdtFile(odtFile);
-                    checker.check();
-                    document.importAccessibilityData(checker.getAccessibilityReport(),
-                        checker.getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(checker.getLastChecked()) + ".rdf");
+            }
+            checker.setOdtFile(odtFile);
+            if (checker.check()) {
+                Report report = checker.getAccessibilityReport();
+                if (report != null) {
+                    document.importAccessibilityData(report.getFile(), report.getName());
                 }
             }
         }
@@ -156,7 +171,7 @@ public class IssueManager {
                                                               RepositoryException {
     
         XRepository xRepository = document.xDMA.getRDFRepository();
-        XURI[] graphNames = document.xDMA.getMetadataGraphsWithType(CHECKER);
+        XURI[] graphNames = document.xDMA.getMetadataGraphsWithType(URIs.CHECKER);
         XNamedGraph[] accessibilityDataGraphs = new XNamedGraph[graphNames.length];
         for (int i=0; i<accessibilityDataGraphs.length; i++) {
             accessibilityDataGraphs[i] = xRepository.getGraph(graphNames[i]);
@@ -170,7 +185,7 @@ public class IssueManager {
                                        WrappedTargetException,
                                        IllegalArgumentException,
                                        PropertyVetoException,
-                                       java.text.ParseException {
+                                       ParseException {
 
         logger.entering("IssueManager", "loadMetadata");
 
@@ -178,47 +193,56 @@ public class IssueManager {
 
         allIssues.clear();
 
-        Issue issue = null;
-        Issue sameIssue = null;
-        Date lastChecked = null;
+        Map<String,Date> mostRecentCheckDates = new HashMap<String,Date>();
+        Issue issue, sameIssue;
+        Date d1, d2;
+        String checker;
+
         for (XNamedGraph accessibilityDataGraph : accessibilityDataGraphs) {
-            XEnumeration assertions = accessibilityDataGraph.getStatements(null, RDF_TYPE, EARL_ASSERTION);
+            XEnumeration assertions = accessibilityDataGraph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
             XResource assertion = null;
             while (assertions.hasMoreElements()) {
                 assertion = ((Statement)assertions.nextElement()).Subject;
                 issue = new Issue(assertion, accessibilityDataGraph);
-                if (issue.isValid()) {
-                    if (issue.getElement().exists()) {
-                        if (allIssues.contains(issue)) {
-                            sameIssue = allIssues.remove(allIssues.indexOf(issue));
-                            if (issue.getLastChecked().before(sameIssue.getLastChecked())) {
-                                if (issue.isIgnored()) {
-                                    sameIssue.setIgnored(true);
-                                }
-                                issue.remove();
-                                issue = sameIssue;
-                            } else {
-                                if (sameIssue.isIgnored()) {
-                                    issue.setIgnored(true);
-                                }
-                                sameIssue.remove();
-                            }
+                if (!issue.valid()) {
+                    break;
+                }
+                if (!issue.getElement().exists()) {
+                    logger.info("Element does not exist, removing issue");
+                    issue.remove();
+                    break;
+                }
+                if (allIssues.contains(issue)) {
+                    sameIssue = allIssues.remove(allIssues.indexOf(issue));
+                    if (issue.getCheckDate().before(sameIssue.getCheckDate())) {
+                        if (issue.ignored()) {
+                            sameIssue.ignored(true);
                         }
-                        allIssues.add(issue);
-                    } else {
-                        logger.info("Element does not exist, removing issue");
                         issue.remove();
+                        issue = sameIssue;
+                    } else {
+                        if (sameIssue.ignored()) {
+                            issue.ignored(true);
+                        }
+                        sameIssue.remove();
                     }
+                }
+                allIssues.add(issue);
+                checker = issue.getChecker();
+                d1 = issue.getCheckDate();
+                d2 = mostRecentCheckDates.get(checker);
+                if (d2==null || d2.before(d1)) {
+                    mostRecentCheckDates.put(checker, d1);
                 }
             }
         }
 
-        lastChecked = internalChecker.getLastChecked();
-        if (lastChecked != null) {
-            for (Issue issue2 : allIssues) {
-                if (issue2.getLastChecked().before(lastChecked)) {
-                    issue2.setRepaired(true);
-                }
+        for (Issue i : allIssues) {
+            checker = i.getChecker();
+            d1 = i.getCheckDate();
+            d2 = mostRecentCheckDates.get(checker);
+            if (d1.before(d2)) {
+                i.repaired(true);
             }
         }
 
@@ -226,20 +250,31 @@ public class IssueManager {
 
     }
 
-    public void selectIssue(Issue issue) {
+    public void select(Object o) {
 
-        selectedIssue = issue;
-        if (issue != null) {
-            selectedCheck = issue.getCheck();
-        } else {
-            selectedCheck = null;
+        selectedCheck = null;
+        selectedIssue = null;
+
+        if (o != null) {
+            if (o instanceof Check) {
+                selectedCheck = (Check)o;
+            } else if (o instanceof Issue) {
+                selectedIssue = (Issue)o;
+                selectedCheck = selectedIssue.getCheck();
+            }
         }
     }
 
-    public void selectCheck(Check check) {
+    public boolean repair(Issue issue)
+                   throws IllegalArgumentException,
+                          RepositoryException,
+                          PropertyVetoException,
+                          NoSuchElementException {
 
-        selectedCheck = check;
-        selectedIssue = null;
+        if (issue == null) { return false; }
+        boolean succes = repairer.repair(issue);
+        issue.repaired(succes);
+        return succes;
     }
 
     public void arrangeIssues() {
@@ -275,9 +310,9 @@ public class IssueManager {
         boolean allRepaired = true;
         boolean allIgnored = true;
         for (Issue issue : check2IssuesMap.get(check)) {
-            if (!issue.isIgnored()) {
+            if (!issue.ignored()) {
                 allIgnored = false;
-                if (!issue.isRepaired()) {
+                if (!issue.repaired()) {
                     allRepaired = false;
                     break;
                 }
@@ -292,20 +327,18 @@ public class IssueManager {
     public Status getIssueStatus(Issue issue) {
 
         boolean alert = (issue.getCheck().getStatus() == Check.Status.ALERT);
-        boolean repaired = issue.isRepaired();
-        boolean ignored = issue.isIgnored();
 
-        return (ignored?  Status.IGNORED:
-                repaired? Status.REPAIRED:
-                alert?    Status.ALERT:
-                          Status.ERROR);
+        return (issue.ignored()?  Status.IGNORED:
+                issue.repaired()? Status.REPAIRED:
+                alert?            Status.ALERT:
+                                  Status.ERROR);
     }
 
-    public Issue getSelectedIssue() {
+    public Issue selectedIssue() {
         return selectedIssue;
     }
 
-    public Check getSelectedCheck() {
+    public Check selectedCheck() {
         return selectedCheck;
     }
 

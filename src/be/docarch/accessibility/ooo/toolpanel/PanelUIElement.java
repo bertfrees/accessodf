@@ -14,6 +14,7 @@ import com.sun.star.lib.uno.helper.ComponentBase;
 
 import com.sun.star.lang.DisposedException;
 
+import be.docarch.accessibility.Constants;
 
 public class PanelUIElement extends ComponentBase
                          implements XUIElement {
@@ -21,7 +22,7 @@ public class PanelUIElement extends ComponentBase
     private final String m_sResourceURL;
     private XToolPanel m_xToolPanel;
 
-    private static final Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
 
     public PanelUIElement(XComponentContext context,
                           XWindow i_rParentWindow,

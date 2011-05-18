@@ -1,9 +1,7 @@
 package be.docarch.accessibility;
 
-import java.io.File;
 import java.util.Collection;
-import java.util.Date;
-
+//import java.util.Date;
 
 /**
  *
@@ -15,12 +13,16 @@ public interface Checker {
 
     public Collection<Check> getChecks();
 
-    public Check getCheck(String identifier);
+    /**
+     * @return Returns the accessibility report or <code>null</code> if not applicable
+     */
+    public Report getAccessibilityReport();
 
-    public File getAccessibilityReport();
+    /**
+     * @return Returns <code>true</code> if the check was successful
+     */
+    public boolean check();
 
-    public void check();
+    //public Date getLastChecked();
 
-    public Date getLastChecked();
-    
 }

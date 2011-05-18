@@ -23,6 +23,8 @@ import com.sun.star.registry.XRegistryKey;
 import com.sun.star.container.NoSuchElementException;
 import com.sun.star.lang.IllegalArgumentException;
 
+import be.docarch.accessibility.Constants;
+
 public class ToolPanelFactory  {
 
     public static class _ToolPanelFactory extends WeakBase
@@ -34,7 +36,9 @@ public class ToolPanelFactory  {
         private static final String _implementationName = _ToolPanelFactory.class.getName();
         private static final String[] _serviceNames = { ToolPanelFactory.class.getName() };
 
-        private static final Logger logger = Logger.getLogger("be.docarch.accessibility");
+        private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
+        private static final String TMP_NAME = Constants.TMP_PREFIX;
+        private static final File TMP_DIR = Constants.getTmpDirectory();
         private Handler fh = null;
         private File logFile = null;
 
@@ -44,7 +48,7 @@ public class ToolPanelFactory  {
 
             try {
 
-                logFile = File.createTempFile("accessibility.", ".log");
+                logFile = File.createTempFile(TMP_NAME, ".log", TMP_DIR);
                 fh = new FileHandler(logFile.getAbsolutePath());
                 fh.setFormatter(new SimpleFormatter());
                 Logger.getLogger("").addHandler(fh);

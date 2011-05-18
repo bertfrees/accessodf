@@ -2,20 +2,16 @@ package be.docarch.accessibility.ooo;
 
 import java.util.logging.Logger;
 import java.util.logging.Level;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
-import java.util.Collection;
 
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.AnyConverter;
 import com.sun.star.uno.Any;
 import com.sun.star.uno.Type;
 import com.sun.star.beans.XPropertySet;
-import com.sun.star.beans.PropertyValue;
 import com.sun.star.frame.XDispatchHelper;
 import com.sun.star.frame.XDispatchProvider;
-import com.sun.star.style.ParagraphAdjust;
 import com.sun.star.awt.XDialog;
 import com.sun.star.awt.XControl;
 import com.sun.star.awt.XControlContainer;
@@ -31,7 +27,6 @@ import com.sun.star.awt.tree.XTreeControl;
 import com.sun.star.awt.tree.XMutableTreeDataModel;
 import com.sun.star.awt.tree.XMutableTreeNode;
 import com.sun.star.lang.EventObject;
-import com.sun.star.lang.Locale;
 import com.sun.star.lang.XComponent;
 import com.sun.star.deployment.PackageInformationProvider;
 import com.sun.star.deployment.XPackageInformationProvider;
@@ -43,7 +38,6 @@ import com.sun.star.text.XTextContent;
 import com.sun.star.text.XTextViewCursor;
 import com.sun.star.text.XTextViewCursorSupplier;
 import com.sun.star.table.XCellRange;
-import com.sun.star.table.XTableRows;
 import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.view.XSelectionChangeListener;
 
@@ -58,7 +52,7 @@ import com.sun.star.beans.PropertyVetoException;
 
 import be.docarch.accessibility.Check;
 import be.docarch.accessibility.ExternalChecker;
-
+import be.docarch.accessibility.Constants;
 
 /**
  *
@@ -68,7 +62,7 @@ public class AccessibilityDialog implements XActionListener,
                                             XItemListener,
                                             XSelectionChangeListener {
 
-    private final static Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
 
     private Document document = null;
     private IssueManager manager = null;
@@ -184,8 +178,8 @@ public class AccessibilityDialog implements XActionListener,
 
         manager.refresh();
 
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         buildTreeView();
         if (issue2NodeMap.containsKey(selectedIssue)) {
@@ -280,7 +274,7 @@ public class AccessibilityDialog implements XActionListener,
 
     private void selectIssue(Issue issue) {
 
-        Issue selectedIssue = manager.getSelectedIssue();
+        Issue selectedIssue = manager.selectedIssue();
 
         try {   
             
@@ -300,7 +294,7 @@ public class AccessibilityDialog implements XActionListener,
             logger.log(Level.SEVERE, null, ex);
         }
 
-        manager.selectIssue(issue);
+        manager.select(issue);
     }
 
     private void selectCheck(Check check) {
@@ -315,7 +309,7 @@ public class AccessibilityDialog implements XActionListener,
             logger.log(Level.SEVERE, null, ex);
         }
 
-        manager.selectCheck(check);
+        manager.select(check);
     }
 
     private void buildTreeView() throws com.sun.star.uno.Exception {
@@ -376,8 +370,8 @@ public class AccessibilityDialog implements XActionListener,
                                              WrappedTargetException,
                                              IllegalArgumentException {
 
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         String image = "";
         IssueManager.Status status = null;
@@ -413,8 +407,8 @@ public class AccessibilityDialog implements XActionListener,
                                         WrappedTargetException,
                                         IllegalArgumentException {
 
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         boolean repair = false;
         boolean ignore = false;
@@ -656,8 +650,8 @@ public class AccessibilityDialog implements XActionListener,
     public void actionPerformed(ActionEvent actionEvent) {
 
         Object source = actionEvent.Source;
-        Issue selectedIssue = manager.getSelectedIssue();
-        Check selectedCheck = manager.getSelectedCheck();
+        Issue selectedIssue = manager.selectedIssue();
+        Check selectedCheck = manager.selectedCheck();
 
         try {
 
@@ -672,13 +666,13 @@ public class AccessibilityDialog implements XActionListener,
             } else if (source.equals(ignoreButton)) {
 
                 if (selectedIssue != null) {
-                    selectedIssue.setIgnored(true);
+                    selectedIssue.ignored(true);
                     updateIssueNode(issue2NodeMap.get(selectedIssue), selectedIssue);
                     //updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
                     updateDialogFields();
                 } else if (selectedCheck != null) {
                     for (Issue issue : manager.getIssuesByCheck(selectedCheck)) {
-                        issue.setIgnored(true);
+                        issue.ignored(true);
                         updateIssueNode(issue2NodeMap.get(issue), issue);
                     }
                     //updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
@@ -689,7 +683,7 @@ public class AccessibilityDialog implements XActionListener,
 
                 if (selectedIssue != null) {
                     if (repair(selectedIssue)) {
-                        selectedIssue.setRepaired(true);
+                        selectedIssue.repaired(true);
                         updateIssueNode(issue2NodeMap.get(selectedIssue), selectedIssue);
                         //updateCheckNode(check2NodeMap.get(selectedCheck), selectedCheck);
                         updateDialogFields();
@@ -697,10 +691,10 @@ public class AccessibilityDialog implements XActionListener,
                 } else if (selectedCheck != null) {
                     boolean repaired = false;
                     for (Issue issue : manager.getIssuesByCheck(selectedCheck)) {
-                        if (!issue.isRepaired() && !issue.isIgnored()) {
+                        if (!issue.repaired() && !issue.ignored()) {
                             if (repair(issue)) {
                                 repaired = true;
-                                issue.setRepaired(true);
+                                issue.repaired(true);
                                 updateIssueNode(issue2NodeMap.get(issue), issue);
                             }
                         }

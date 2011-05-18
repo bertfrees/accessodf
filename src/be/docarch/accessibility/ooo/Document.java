@@ -49,8 +49,7 @@ import com.sun.star.container.NoSuchElementException;
 import com.sun.star.rdf.ParseException;
 import com.sun.star.rdf.RepositoryException;
 
-import be.docarch.accessibility.URIs;
-
+import be.docarch.accessibility.Constants;
 
 /**
  *
@@ -58,7 +57,7 @@ import be.docarch.accessibility.URIs;
  */
 public class Document {
 
-    private final static Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
 
     public XComponentContext xContext = null;
     public XMultiServiceFactory xMSF = null;
@@ -78,7 +77,6 @@ public class Document {
     private XStorable storable = null;
     private XModifiable xModifiable = null;    
     private XTextContent firstParagraph = null;
-    private XURI CHECKER = null;
 
 
     public Document(XComponentContext xContext)
@@ -127,8 +125,7 @@ public class Document {
 
     private void initDocument() throws com.sun.star.uno.Exception {
 
-
-
+        URIs.init(xContext);
 
         textDocument = (XTextDocument)UnoRuntime.queryInterface(XTextDocument.class, doc);
         xMSF = (XMultiServiceFactory) UnoRuntime.queryInterface(XMultiServiceFactory.class, textDocument);
@@ -155,8 +152,6 @@ public class Document {
         conversionProperties[0].Name = "FilterName";
         conversionProperties[0].Value = "writer8";
         storable = (XStorable) UnoRuntime.queryInterface(XStorable.class, xModel);
-
-        CHECKER = URI.create(xContext, URIs.CHECKER);
 
     }
 
@@ -190,12 +185,12 @@ public class Document {
 
         XURI graphURI = null;
         try {
-            graphURI = xDMA.importMetadataFile((short)0, inputStream, metaFolder + graphName, metaFolderURI, new XURI[]{ CHECKER });
+            graphURI = xDMA.importMetadataFile((short)0, inputStream, metaFolder + graphName, metaFolderURI, new XURI[]{ URIs.CHECKER });
         } catch (ElementExistException ex) {
             graphURI = URI.create(xContext, metaFolderURI.getStringValue() + graphName);
             xDMA.removeMetadataFile(graphURI);
             try {
-                xDMA.importMetadataFile((short)0, inputStream, metaFolder + graphName, metaFolderURI, new XURI[]{ CHECKER });
+                xDMA.importMetadataFile((short)0, inputStream, metaFolder + graphName, metaFolderURI, new XURI[]{ URIs.CHECKER });
             } catch (ElementExistException e) {
             }
         }
@@ -279,8 +274,12 @@ public class Document {
         return firstParagraph;
     }
 
-    public void setModified() throws PropertyVetoException {
+    public void setModified() {
 
-        xModifiable.setModified(true);
+        try {
+            xModifiable.setModified(true);
+        } catch (PropertyVetoException e) {
+            // read-only document
+        }
     }
 }

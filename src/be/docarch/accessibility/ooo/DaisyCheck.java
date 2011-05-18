@@ -12,13 +12,13 @@ import be.docarch.accessibility.Check;
 public class DaisyCheck extends Check {
 
     private static Locale locale = Locale.getDefault();
-    private static ResourceBundle names = ResourceBundle.getBundle("be/docarch/accessibility/l10n/names", locale);
-    private static ResourceBundle descriptions = ResourceBundle.getBundle("be/docarch/accessibility/l10n/descriptions", locale);
-    private static ResourceBundle suggestions = ResourceBundle.getBundle("be/docarch/accessibility/l10n/suggestions", locale);
+    private static ResourceBundle bundle = ResourceBundle.getBundle("be/docarch/accessibility/l10n/Bundle", locale);
 
     public static enum ID {
 
-        E_UnsupportedImageFormat,        
+        E_UnsupportedImageFormat,
+        A_EmptyTitleField
+
     }
 
     private ID identifier;
@@ -36,6 +36,8 @@ public class DaisyCheck extends Check {
         switch (identifier) {
             case E_UnsupportedImageFormat:
                 return Status.ERROR;
+            case A_EmptyTitleField:
+                return Status.ALERT;
             default:
                 return null;
         }
@@ -44,6 +46,8 @@ public class DaisyCheck extends Check {
     public Category getCategory() {
 
         switch (identifier) {
+            case A_EmptyTitleField:
+                return Category.TITLES;
             case E_UnsupportedImageFormat:
                 return Category.GRAPHICS;
             default:
@@ -55,8 +59,8 @@ public class DaisyCheck extends Check {
 
         if (identifier == null) {
             return null;
-        } else if (names.containsKey(identifier.name())) {
-            return names.getString(identifier.name());
+        } else if (bundle.containsKey("name_" + identifier.name())) {
+            return bundle.getString("name_" + identifier.name());
         } else {
             return identifier.name();
         }
@@ -66,8 +70,8 @@ public class DaisyCheck extends Check {
 
         if (identifier == null) {
             return null;
-        } else if (descriptions.containsKey(identifier.name())) {
-            return descriptions.getString(identifier.name());
+        } else if (bundle.containsKey("description_" + identifier.name())) {
+            return bundle.getString("description_" + identifier.name());
         } else {
             return identifier.name();
         }
@@ -77,8 +81,8 @@ public class DaisyCheck extends Check {
 
         if (identifier == null) {
             return null;
-        } else if (suggestions.containsKey(identifier.name())) {
-            return suggestions.getString(identifier.name());
+        } else if (bundle.containsKey("suggestion_" + identifier.name())) {
+            return bundle.getString("suggestion_" + identifier.name());
         } else {
             return identifier.name();
         }
@@ -87,6 +91,9 @@ public class DaisyCheck extends Check {
     public RepairMode getRepairMode() {
 
         switch (identifier) {
+            case A_EmptyTitleField:
+                return RepairMode.SEMI_AUTOMATED;
+            case E_UnsupportedImageFormat:
             default:
                 return RepairMode.MANUAL;
         }

@@ -22,6 +22,8 @@ import com.sun.star.registry.XRegistryKey;
 import com.sun.star.lib.uno.helper.WeakBase;
 import com.sun.star.lib.uno.helper.Factory;
 
+import be.docarch.accessibility.Constants;
+
 
 public final class AccessibilityCheckerAddOn extends WeakBase
    implements com.sun.star.lang.XInitialization,
@@ -35,7 +37,9 @@ public final class AccessibilityCheckerAddOn extends WeakBase
     private static final String[] m_serviceNames = {
         "com.sun.star.frame.ProtocolHandler" };
 
-    private static final Logger logger = Logger.getLogger("be.docarch.accessibility");
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
+    private static final String TMP_NAME = Constants.TMP_PREFIX;
+    private static final File TMP_DIR = Constants.getTmpDirectory();
     private Handler fh = null;
     private File logFile = null;
     private int counter = 0;
@@ -46,7 +50,7 @@ public final class AccessibilityCheckerAddOn extends WeakBase
 
         try {
 
-            logFile = File.createTempFile("accessibility.", ".log");
+            logFile = File.createTempFile(TMP_NAME, ".log", TMP_DIR);
             fh = new FileHandler(logFile.getAbsolutePath());
             fh.setFormatter(new SimpleFormatter());
             Logger.getLogger("").addHandler(fh);

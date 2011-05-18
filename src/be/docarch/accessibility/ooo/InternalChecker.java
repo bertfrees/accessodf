@@ -1,6 +1,5 @@
 package be.docarch.accessibility.ooo;
 
-import java.io.File;
 import java.util.Date;
 import java.util.Collection;
 import java.util.Map;
@@ -57,10 +56,10 @@ import com.sun.star.container.ElementExistException;
 import com.sun.star.container.NoSuchElementException;
 import com.sun.star.rdf.RepositoryException;
 
-import be.docarch.accessibility.URIs;
+import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Check;
 import be.docarch.accessibility.Checker;
-
+import be.docarch.accessibility.Report;
 
 /**
  *
@@ -70,6 +69,7 @@ public class InternalChecker implements Checker {
 
     private Document document = null;
     private Settings settings = null;
+    private boolean daisyChecks = false;
     private TreeMap<String,Check> checks = null;
     private TreeMap<String,XURI> checkURIs = null;
     private XNamedGraph currentGraph = null;
@@ -82,38 +82,7 @@ public class InternalChecker implements Checker {
     private XTextViewCursor viewCursor = null;
     private XPageCursor pageCursor = null;
     private boolean modified = false;
-
-    private XURI CHECKER = null;
-    private XURI CHECKER_CHECKS = null;
-    private XURI CHECKER_DOCUMENT = null;
-    private XURI CHECKER_PARAGRAPH = null;
-    private XURI CHECKER_SPAN = null;
-    private XURI CHECKER_TABLE = null;
-    private XURI CHECKER_OBJECT = null;
-    private XURI CHECKER_START = null;
-    private XURI CHECKER_END = null;
-    private XURI CHECKER_NAME = null;
-    private XURI CHECKER_INDEX = null;
-    private XURI CHECKER_LASTCHECKED = null;
-    private XURI CHECKER_SAMPLE = null;
-    private XURI RDF_TYPE = null;
-    private XURI FOAF_GROUP = null;
-    private XURI FOAF_MEMBER = null;
-    private XURI FOAF_PERSON = null;
-    private XURI FOAF_NAME = null;
-    private XURI EARL_MAINASSERTOR = null;
-    private XURI EARL_SOFTWARE = null;
-    private XURI EARL_TESTSUBJECT = null;
-    private XURI EARL_TESTRESULT = null;
-    private XURI EARL_TESTCASE = null;
-    private XURI EARL_ASSERTION = null;
-    private XURI EARL_OUTCOME = null;
-    private XURI EARL_FAILED = null;
-    private XURI EARL_PASSED = null;
-    private XURI EARL_RESULT = null;
-    private XURI EARL_TEST = null;
-    private XURI EARL_SUBJECT = null;
-    private XURI EARL_ASSERTEDBY = null;
+    private String reportName = null;
 
     public InternalChecker(Document document)
                     throws IllegalArgumentException {
@@ -124,49 +93,17 @@ public class InternalChecker implements Checker {
         XComponentContext xContext = document.xContext;
         settings = new Settings(xContext);
 
-        CHECKER = URI.create(xContext, URIs.CHECKER);
-        CHECKER_CHECKS = URI.create(xContext, URIs.CHECKER_CHECKS);
-        CHECKER_DOCUMENT = URI.create(xContext, URIs.CHECKER_DOCUMENT);
-        CHECKER_PARAGRAPH = URI.create(xContext, URIs.CHECKER_PARAGRAPH);
-        CHECKER_SPAN = URI.create(xContext, URIs.CHECKER_SPAN);
-        CHECKER_TABLE = URI.create(xContext, URIs.CHECKER_TABLE);
-        CHECKER_OBJECT = URI.create(xContext, URIs.CHECKER_OBJECT);
-        CHECKER_START = URI.create(xContext, URIs.CHECKER_START);
-        CHECKER_END = URI.create(xContext, URIs.CHECKER_END);
-        CHECKER_NAME = URI.create(xContext, URIs.CHECKER_NAME);
-        CHECKER_INDEX = URI.create(xContext, URIs.CHECKER_INDEX);
-        CHECKER_LASTCHECKED = URI.create(xContext, URIs.CHECKER_LASTCHECKED);
-        CHECKER_SAMPLE = URI.create(xContext, URIs.CHECKER_SAMPLE);
-        RDF_TYPE = URI.create(xContext, URIs.RDF_TYPE);
-        FOAF_GROUP = URI.create(xContext, URIs.FOAF_GROUP);
-        FOAF_MEMBER = URI.create(xContext, URIs.FOAF_MEMBER);
-        FOAF_PERSON = URI.create(xContext, URIs.FOAF_PERSON);
-        FOAF_NAME = URI.create(xContext, URIs.FOAF_NAME);
-        EARL_MAINASSERTOR = URI.create(xContext, URIs.EARL_MAINASSERTOR);
-        EARL_SOFTWARE = URI.create(xContext, URIs.EARL_SOFTWARE);
-        EARL_TESTSUBJECT = URI.create(xContext, URIs.EARL_TESTSUBJECT);
-        EARL_TESTRESULT = URI.create(xContext, URIs.EARL_TESTRESULT);
-        EARL_TESTCASE = URI.create(xContext, URIs.EARL_TESTCASE);
-        EARL_ASSERTION = URI.create(xContext, URIs.EARL_ASSERTION);
-        EARL_OUTCOME = URI.create(xContext, URIs.EARL_OUTCOME);
-        EARL_RESULT = URI.create(xContext, URIs.EARL_RESULT);
-        EARL_TEST = URI.create(xContext, URIs.EARL_TEST);
-        EARL_SUBJECT = URI.create(xContext, URIs.EARL_SUBJECT);
-        EARL_ASSERTEDBY = URI.create(xContext, URIs.EARL_ASSERTEDBY);
-        EARL_FAILED = URI.create(xContext, URIs.EARL_FAILED);
-        EARL_PASSED = URI.create(xContext, URIs.EARL_PASSED);
-
         checkURIs = new TreeMap<String,XURI>();
         checks = new TreeMap<String,Check>();
 
         for (GeneralCheck.ID id : GeneralCheck.ID.values()) {
             checks.put(id.name(), new GeneralCheck(id));
-            checkURIs.put(id.name(), URI.createNS(xContext, URIs.CHECKER_CHECKS, id.name()));
+            checkURIs.put(id.name(), URI.createNS(xContext, Constants.CHECKER_CHECKS, id.name()));
         }
 
         for (DaisyCheck.ID id : DaisyCheck.ID.values()) {
             checks.put(id.name(), new DaisyCheck(id));
-            checkURIs.put(id.name(), URI.createNS(xContext, URIs.CHECKER_CHECKS, id.name()));
+            checkURIs.put(id.name(), URI.createNS(xContext, Constants.CHECKER_CHECKS, id.name()));
         }
     }
 
@@ -174,15 +111,15 @@ public class InternalChecker implements Checker {
         return checks.values();
     }
 
-    public Check getCheck(String identifier) {
-        return (checks.get(identifier));
+    public String getIdentifier() {
+        return "be.docarch.accessibility.ooo.InternalChecker";
     }
 
-    public File getAccessibilityReport() {
+    public Report getAccessibilityReport() {
         return null;
     }
 
-    public Date getLastChecked() {
+    public Date getLastCheckDate() {
 
         try {
             if (lastChecked != null) {
@@ -195,18 +132,21 @@ public class InternalChecker implements Checker {
         }
     }
 
-    public void check(){
+    public boolean check(){
+
+        lastChecked = new Date();
+        reportName = getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(lastChecked) + ".rdf";
 
         try {
 
             settings.loadData();
-            lastChecked = new Date();
-            String graphName = getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(lastChecked) + ".rdf";
+            daisyChecks = settings.daisyChecks();
+
             XURI graphURI = null;
             try {
-                graphURI = document.xDMA.addMetadataFile(document.metaFolder + graphName, new XURI[]{ CHECKER });
-            } catch (ElementExistException ex) {
-                graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + graphName);
+                graphURI = document.xDMA.addMetadataFile(document.metaFolder + reportName, new XURI[]{ URIs.CHECKER });
+            } catch (ElementExistException e) {
+                graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + reportName);
             }
 
             currentGraph = document.xRepository.getGraph(graphURI);
@@ -214,30 +154,34 @@ public class InternalChecker implements Checker {
             // EARL assertor & testcases
 
             currentAssertor = document.xRepository.createBlankNode();
-            XURI software = URI.create(document.xContext, URIs.CHECKER);
-            XURI bert = URI.create(document.xContext, URIs.BERT);
+            XURI software = URI.create(document.xContext, "http://www.docarch.be/accessibility/ooo/InternalChecker");
+            XURI bert = URI.create(document.xContext, Constants.BERT);
 
-            addStatement(bert, RDF_TYPE, FOAF_PERSON);
-            addStatement(bert, FOAF_NAME, Literal.create(document.xContext, "Bert Frees"));
-            addStatement(software, RDF_TYPE, EARL_SOFTWARE);
-            addStatement(currentAssertor, RDF_TYPE, FOAF_GROUP);
-            addStatement(currentAssertor, EARL_MAINASSERTOR, software);
-            addStatement(currentAssertor, FOAF_MEMBER, bert);
+            addStatement(bert, URIs.RDF_TYPE, URIs.FOAF_PERSON);
+            addStatement(bert, URIs.FOAF_NAME, Literal.create(document.xContext, "Bert Frees"));
+            addStatement(software, URIs.RDF_TYPE, URIs.EARL_SOFTWARE);
+            addStatement(currentAssertor, URIs.RDF_TYPE, URIs.FOAF_GROUP);
+            addStatement(currentAssertor, URIs.EARL_MAINASSERTOR, software);
+            addStatement(currentAssertor, URIs.FOAF_MEMBER, bert);
 
             for (String id : checkURIs.keySet()) {
-                addStatement(checkURIs.get(id), RDF_TYPE, EARL_TESTCASE);
+                addStatement(checkURIs.get(id), URIs.RDF_TYPE, URIs.EARL_TESTCASE);
             }
 
             // Traverse document
             traverseDocument();
 
-        } catch (IllegalArgumentException ex) {
-        } catch (RepositoryException ex) {
-        } catch (UnknownPropertyException ex) {
-        } catch (NoSuchElementException ex) {
-        } catch (WrappedTargetException ex) {
-        } catch (com.sun.star.uno.Exception ex) {
+            return true;
+
+        } catch (IllegalArgumentException e) {
+        } catch (RepositoryException e) {
+        } catch (UnknownPropertyException e) {
+        } catch (NoSuchElementException e) {
+        } catch (WrappedTargetException e) {
+        } catch (com.sun.star.uno.Exception e) {
         }
+
+        return false;
     }
 
     private void traverseDocument() throws IllegalArgumentException,
@@ -288,7 +232,9 @@ public class InternalChecker implements Checker {
         traverseEmbeddedObjects(embeddedObjects);
 
         // Attach general warnings to first paragraph
-        if (document.docProperties.getTitle().length() == 0) { metadata.add(checkURIs.get(GeneralCheck.ID.A_EmptyTitleField.name())); }
+        if (daisyChecks) {
+            if (document.docProperties.getTitle().length() == 0) { metadata.add(checkURIs.get(DaisyCheck.ID.A_EmptyTitleField.name())); }
+        }
         if (docLocale.Language.equals("zxx")) { metadata.add(checkURIs.get(GeneralCheck.ID.E_DefaultLanguage.name())); }
         if (numberOfTitles == 0)   { metadata.add(checkURIs.get(GeneralCheck.ID.A_NoTitle.name())); }
         if (numberOfHeadings == 0) { metadata.add(checkURIs.get(GeneralCheck.ID.A_NoHeadings.name())); }
@@ -878,12 +824,16 @@ public class InternalChecker implements Checker {
                 graphicMetadata.add(checkURIs.get(GeneralCheck.ID.A_ImageWithoutAlt.name()));
             }
             if (url.startsWith("vnd.sun.star.GraphicObject:")) {
-                if (settings.daisyChecksAvailable()) {
+                if (daisyChecks) {
                     graphic = (XGraphic)AnyConverter.toObject(
                                XGraphic.class, properties.getPropertyValue("Graphic"));
                     mediaProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphic);
                     mimeType = AnyConverter.toString(mediaProperties.getPropertyValue("MimeType"));
-                    if (!mimeType.equals("image/jpeg") &&
+
+System.out.println("mimeType = " + mimeType); // Vanaf de tweede recheck kan dit veranderen in "image/x-vclgraphic" ??
+                                              //   (zie ook http://api.openoffice.org/docs/common/ref/com/sun/star/graphic/GraphicDescriptor.html#MimeType)
+
+                    if (!mimeType.equals("image/jpeg") &&              
                         !mimeType.equals("image/png")) {
                         graphicMetadata.add(checkURIs.get(DaisyCheck.ID.E_UnsupportedImageFormat.name()));
                     }
@@ -891,7 +841,7 @@ public class InternalChecker implements Checker {
             } else {
                 graphicMetadata.add(checkURIs.get(GeneralCheck.ID.A_LinkedImage.name()));
                 fileExtension = url.substring(url.lastIndexOf(".") + 1);
-                if (settings.daisyChecksAvailable() &&
+                if (daisyChecks &&
                     !fileExtension.equals("png") &&
                     !fileExtension.equals("jpg")) {
                     graphicMetadata.add(checkURIs.get(DaisyCheck.ID.E_UnsupportedImageFormat.name()));
@@ -942,8 +892,8 @@ public class InternalChecker implements Checker {
 
         XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, RDF_TYPE, EARL_TESTSUBJECT);
-        addStatement(subject, RDF_TYPE, CHECKER_DOCUMENT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.CHECKER_DOCUMENT);
 
         for (XURI check : data) {
             addAssertion(subject, check);
@@ -963,9 +913,9 @@ public class InternalChecker implements Checker {
 
         XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, RDF_TYPE, EARL_TESTSUBJECT);
-        addStatement(subject, RDF_TYPE, CHECKER_PARAGRAPH);
-        addStatement(subject, CHECKER_START, xMetadatable);
+        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.CHECKER_PARAGRAPH);
+        addStatement(subject, URIs.CHECKER_START, xMetadatable);
 
         for (XURI check : data) {
             addAssertion(subject, check);
@@ -996,11 +946,11 @@ public class InternalChecker implements Checker {
 
         XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, RDF_TYPE, EARL_TESTSUBJECT);
-        addStatement(subject, RDF_TYPE, CHECKER_SPAN);
-        addStatement(subject, CHECKER_START, startMetadatable);
-        addStatement(subject, CHECKER_END, endMetadatable);
-        addStatement(subject, CHECKER_SAMPLE, Literal.create(document.xContext, sample));
+        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.CHECKER_SPAN);
+        addStatement(subject, URIs.CHECKER_START, startMetadatable);
+        addStatement(subject, URIs.CHECKER_END, endMetadatable);
+        addStatement(subject, URIs.CHECKER_SAMPLE, Literal.create(document.xContext, sample));
 
         addAssertion(subject, data);
     }
@@ -1015,9 +965,9 @@ public class InternalChecker implements Checker {
 
         XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, RDF_TYPE, EARL_TESTSUBJECT);
-        addStatement(subject, RDF_TYPE, CHECKER_TABLE);
-        addStatement(subject, CHECKER_NAME, Literal.create(document.xContext, namedTable.getName()));
+        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.CHECKER_TABLE);
+        addStatement(subject, URIs.CHECKER_NAME, Literal.create(document.xContext, namedTable.getName()));
 
         for (XURI check : data) {
             addAssertion(subject, check);
@@ -1036,9 +986,9 @@ public class InternalChecker implements Checker {
 
         XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, RDF_TYPE, EARL_TESTSUBJECT);
-        addStatement(subject, RDF_TYPE, CHECKER_OBJECT);
-        addStatement(subject, CHECKER_NAME, Literal.create(document.xContext, namedGraphic.getName()));
+        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.CHECKER_OBJECT);
+        addStatement(subject, URIs.CHECKER_NAME, Literal.create(document.xContext, namedGraphic.getName()));
 
         for (XURI check : data) {
             addAssertion(subject, check);
@@ -1057,9 +1007,9 @@ public class InternalChecker implements Checker {
 
         XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, RDF_TYPE, EARL_TESTSUBJECT);
-        addStatement(subject, RDF_TYPE, CHECKER_OBJECT);
-        addStatement(subject, CHECKER_NAME, Literal.create(document.xContext, namedObject.getName()));
+        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+        addStatement(subject, URIs.RDF_TYPE, URIs.CHECKER_OBJECT);
+        addStatement(subject, URIs.CHECKER_NAME, Literal.create(document.xContext, namedObject.getName()));
 
         addAssertion(subject, data);
     }
@@ -1073,14 +1023,14 @@ public class InternalChecker implements Checker {
         XBlankNode assertion = document.xRepository.createBlankNode();
         XBlankNode testresult = document.xRepository.createBlankNode();
 
-        addStatement(testresult, RDF_TYPE, EARL_TESTRESULT);
-        addStatement(testresult, EARL_OUTCOME, EARL_FAILED);
-        addStatement(testresult, CHECKER_LASTCHECKED, Literal.create(document.xContext, dateFormat.format(lastChecked)));
-        addStatement(assertion, RDF_TYPE, EARL_ASSERTION);
-        addStatement(assertion, EARL_RESULT, testresult);
-        addStatement(assertion, EARL_TEST, check);
-        addStatement(assertion, EARL_SUBJECT, subject);
-        addStatement(assertion, EARL_ASSERTEDBY, currentAssertor);
+        addStatement(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT);
+        addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_FAILED);
+        addStatement(testresult, URIs.CHECKER_LASTCHECKED, Literal.create(document.xContext, dateFormat.format(lastChecked)));
+        addStatement(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
+        addStatement(assertion, URIs.EARL_RESULT, testresult);
+        addStatement(assertion, URIs.EARL_TEST, check);
+        addStatement(assertion, URIs.EARL_SUBJECT, subject);
+        addStatement(assertion, URIs.EARL_ASSERTEDBY, currentAssertor);
 
 //        addStatement(assertion, CHECKER_INDEX, Literal.create(xContext, String.valueOf(++assertionNr)));
 //        addStatement(assertion, CHECKER_INDEX,
@@ -1100,9 +1050,5 @@ public class InternalChecker implements Checker {
         if (currentGraph != null) {
             currentGraph.addStatement(subject, predicate, object);
         }
-    }
-
-    public String getIdentifier() {
-        return "be.docarch.accessibility.ooo.InternalChecker";
     }
 }
