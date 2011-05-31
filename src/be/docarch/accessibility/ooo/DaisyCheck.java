@@ -87,15 +87,4 @@ public class DaisyCheck extends Check {
             return identifier.name();
         }
     }
-
-    public RepairMode getRepairMode() {
-
-        switch (identifier) {
-            case A_EmptyTitleField:
-                return RepairMode.SEMI_AUTOMATED;
-            case E_UnsupportedImageFormat:
-            default:
-                return RepairMode.MANUAL;
-        }
-    }
 }

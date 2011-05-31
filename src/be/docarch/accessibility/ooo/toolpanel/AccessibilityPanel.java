@@ -92,9 +92,6 @@ public class AccessibilityPanel extends ComponentBase
 
     private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
 
-    private static Locale locale;
-    private static ResourceBundle bundle;
-
     private static String L10N_errors;
     private static String L10N_warnings;
     private static String L10N_issue;
@@ -162,7 +159,7 @@ public class AccessibilityPanel extends ComponentBase
     private XTextViewCursor viewCursor = null;
     private XSelectionSupplier selectionSupplier = null;
 
-    private Issue currentFocus = null;
+    private Issue focusedIssue = null;
 
     private XMutableTreeDataModel dataModel = null;
     private HashMap<Issue,XMutableTreeNode> issue2NodeMap = null;
@@ -179,14 +176,14 @@ public class AccessibilityPanel extends ComponentBase
 
         logger.entering("AccessibilityPanel", "<init>");
 
+        Locale oooLocale = Locale.getDefault();
+
         try {
-            locale = new Locale(UnoUtils.getUILocale(xContext));
-            Locale.setDefault(locale);
+            oooLocale = new Locale(UnoUtils.getUILocale(xContext));
         } catch (com.sun.star.uno.Exception ex) {
-            logger.log(Level.SEVERE, null, ex);
-            locale = Locale.getDefault();
         }
-        bundle = ResourceBundle.getBundle("be/docarch/accessibility/ooo/toolpanel/l10n/toolpanel", locale);
+
+        ResourceBundle bundle = ResourceBundle.getBundle("be/docarch/accessibility/ooo/toolpanel/l10n/toolpanel", oooLocale);
 
         L10N_errors = bundle.getString("errors");
         L10N_warnings = bundle.getString("warnings");
@@ -366,73 +363,86 @@ public class AccessibilityPanel extends ComponentBase
         int MARGIN2 =         2*6;
         int SIZE_IMAGE =      2*16;
         int HEIGHT_LABEL =    2*10;
-        int WIDTH_BUTTON =    2*40;
+        int WIDTH_BUTTON =    2*60;
         int HEIGHT_BUTTON =   2*13;
         int MIN_WIDTH =       2*100;
         int MIN_HEIGHT_TREE = 2*80;
 
         totalWidth = Math.max(MIN_WIDTH, visibleWidth);
 
+        // Tree Control
         controlRectangles[0].X =       MARGIN;
         controlRectangles[0].Y =       MARGIN;
         controlRectangles[0].Width =   totalWidth - controlRectangles[0].X - MARGIN;
         controlRectangles[0].Height =  MIN_HEIGHT_TREE;
 
+        // Name Label
         controlRectangles[1].X =       MARGIN2;
         controlRectangles[1].Y =       controlRectangles[0].Y + controlRectangles[0].Height + MARGIN2;
         controlRectangles[1].Width =   totalWidth - controlRectangles[1].X - MARGIN;
         controlRectangles[1].Height =  HEIGHT_LABEL;
 
+        // Status Image
         controlRectangles[2].X =       MARGIN2;
         controlRectangles[2].Y =       controlRectangles[1].Y + controlRectangles[1].Height;
         controlRectangles[2].Width =   SIZE_IMAGE;
         controlRectangles[2].Height =  SIZE_IMAGE;
-        
+
+        // Name Field
         controlRectangles[3].X =       controlRectangles[2].X + controlRectangles[2].Width + MARGIN2;
         controlRectangles[3].Y =       controlRectangles[2].Y + controlRectangles[2].Height - 24 - 4;
         controlRectangles[3].Width =   totalWidth - controlRectangles[3].X - MARGIN;
         controlRectangles[3].Height =  24;
 
+        // Description Label
         controlRectangles[4].X =       MARGIN2;
         controlRectangles[4].Y =       controlRectangles[3].Y + controlRectangles[3].Height + MARGIN2;
         controlRectangles[4].Width =   totalWidth - controlRectangles[4].X - MARGIN;
         controlRectangles[4].Height =  HEIGHT_LABEL;
 
+        // Description Field
         controlRectangles[5].X =       MARGIN;
         controlRectangles[5].Y =       controlRectangles[4].Y + controlRectangles[4].Height;
         controlRectangles[5].Width =   totalWidth - controlRectangles[5].X - MARGIN;
         controlRectangles[5].Height =  70;
 
+        // Suggestion Label
         controlRectangles[6].X =       MARGIN2;
         controlRectangles[6].Y =       controlRectangles[5].Y + controlRectangles[5].Height + MARGIN2;
         controlRectangles[6].Width =   totalWidth - controlRectangles[6].X - MARGIN;
         controlRectangles[6].Height =  HEIGHT_LABEL;
 
+        // Suggestion Field
         controlRectangles[7].X =       MARGIN;
         controlRectangles[7].Y =       controlRectangles[6].Y + controlRectangles[6].Height;
         controlRectangles[7].Width =   totalWidth - controlRectangles[7].X - MARGIN;
         controlRectangles[7].Height =  70;
 
+        // Clear Button
         controlRectangles[8].X =       MARGIN;
         controlRectangles[8].Y =       controlRectangles[7].Y + controlRectangles[7].Height + MARGIN2;
         controlRectangles[8].Width =   WIDTH_BUTTON;
         controlRectangles[8].Height =  HEIGHT_BUTTON;
 
+        // Refresh Button
         controlRectangles[9].X =       controlRectangles[8].X + controlRectangles[8].Width + MARGIN;
         controlRectangles[9].Y =       controlRectangles[8].Y;
         controlRectangles[9].Width =   WIDTH_BUTTON;
         controlRectangles[9].Height =  HEIGHT_BUTTON;
 
+        // Ignore Button
         controlRectangles[10].X =      controlRectangles[8].X;
         controlRectangles[10].Y =      controlRectangles[8].Y + controlRectangles[8].Height + MARGIN;
         controlRectangles[10].Width =  WIDTH_BUTTON;
         controlRectangles[10].Height = HEIGHT_BUTTON;
 
+        // Repair Button
         controlRectangles[11].X =      controlRectangles[9].X;
         controlRectangles[11].Y =      controlRectangles[10].Y;
         controlRectangles[11].Width =  WIDTH_BUTTON;
         controlRectangles[11].Height = HEIGHT_BUTTON;
 
+        // Help Button
         controlRectangles[12].X =      controlRectangles[10].X;
         controlRectangles[12].Y =      controlRectangles[10].Y + controlRectangles[10].Height + MARGIN;
         controlRectangles[12].Width =  WIDTH_BUTTON;
@@ -590,7 +600,7 @@ public class AccessibilityPanel extends ComponentBase
 
         manager.refresh();
 
-        currentFocus = null;
+        focusedIssue = null;
         Issue oldIssue = manager.selectedIssue();
         Check oldCheck = manager.selectedCheck();
 
@@ -608,9 +618,6 @@ public class AccessibilityPanel extends ComponentBase
 
         updateDialogFields();
         updateFocus();
-
-        ignoreButtonProperties.setPropertyValue("Enabled", true); // hack
-        repairButtonProperties.setPropertyValue("Enabled", true);
 
         logger.exiting("AccessibilityPanel", "refresh");
 
@@ -697,7 +704,7 @@ public class AccessibilityPanel extends ComponentBase
             checkNodeValue = i++;
 
             if (issueList.size() == 1 &&
-                issueList.get(0).getElement().getType() == Element.Type.DOCUMENT) {
+                issueList.get(0).getElement() == null) {
                 checkNode = dataModel.createNode("", false);
                 checkNode.setDataValue(new Any(Type.LONG, checkNodeValue));
                 node2IssueMap.put(checkNodeValue, issueList.get(0));
@@ -778,9 +785,9 @@ public class AccessibilityPanel extends ComponentBase
             descriptionField.setText(selectedCheck.getDescription());
             suggestionField.setText(selectedCheck.getSuggestion());
             if (selectedIssue != null) {
-                status = manager.getIssueStatus(selectedIssue);
+                status = manager.getStatus(selectedIssue);
             } else {
-                status = manager.getCheckStatus(selectedCheck);
+                status = manager.getStatus(selectedCheck);
             }
             switch (status) {
                 case IGNORED:
@@ -802,25 +809,31 @@ public class AccessibilityPanel extends ComponentBase
     private void updateFocus() {
 
         Issue selectedIssue = manager.selectedIssue();
+        if (selectedIssue == null) { return; }
+        Element selectedElement = selectedIssue.getElement();
+
+        if (focusedIssue != null) {
+            Element focusedElement = focusedIssue.getElement();
+            if (selectedElement != null && focusedElement != null) {
+                if (selectedElement.equals(focusedElement)) {
+                    return;
+                }
+            }
+        }
 
         try {
 
-            if (selectedIssue == null) {
-                //removeSelection();
-            } else if (currentFocus == null) {
-                focus(selectedIssue.getElement());
-            } else if (!selectedIssue.getElement().equals(currentFocus.getElement())) {
-                focus(selectedIssue.getElement());
-            }
+            focus(selectedElement);
+            focusedIssue = selectedIssue;
 
-            currentFocus = selectedIssue;
-
-        } catch (IllegalArgumentException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        } catch (NoSuchElementException ex) {
-            logger.log(Level.SEVERE, null, ex);
-        } catch (WrappedTargetException ex) {
-            logger.log(Level.SEVERE, null, ex);
+        } catch (IllegalArgumentException e) {
+            logger.log(Level.SEVERE, null, e);
+        } catch (NoSuchElementException e) {
+            logger.log(Level.SEVERE, null, e);
+        } catch (WrappedTargetException e) {
+            logger.log(Level.SEVERE, null, e);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, null, e);
         }
     }
 
@@ -832,37 +845,40 @@ public class AccessibilityPanel extends ComponentBase
         Issue selectedIssue = manager.selectedIssue();
         Check selectedCheck = manager.selectedCheck();
 
-        boolean repair = false;
-        boolean ignore = false;
+        boolean repairable = false;
+        boolean ignorable = false;
 
         if (selectedIssue != null) {
             ignoreButton.setLabel(L10N_ignore);
             repairButton.setLabel(L10N_repair);
             if (!selectedIssue.repaired() && !selectedIssue.ignored()) {
-                ignore = true;
-                if (selectedCheck.getRepairMode() == Check.RepairMode.AUTO ||
-                    selectedCheck.getRepairMode() == Check.RepairMode.SEMI_AUTOMATED) {
-                    repair = true;
-                }
+                ignorable = true;
+                repairable = manager.repairable(selectedCheck);
             }
-        } else {
+        } else if (selectedCheck != null) {
             ignoreButton.setLabel(L10N_ignoreAll);
             repairButton.setLabel(L10N_repairAll);
             if (selectedCheck != null) {
-                IssueManager.Status status = manager.getCheckStatus(selectedCheck);
+                IssueManager.Status status = manager.getStatus(selectedCheck);
                 if (status != IssueManager.Status.REPAIRED &&
                     status != IssueManager.Status.IGNORED) {
-                    ignore = true;
-                    if (selectedCheck.getRepairMode() == Check.RepairMode.AUTO) {
-                        repair = true;
+                    ignorable = true;                    
+                    if (manager.repairable(selectedCheck)) {
+                        if (manager.getRepairMode(selectedCheck) == Repairer.RepairMode.AUTO) {
+                            repairable = true;
+                        }
                     }
                 }
             }
+        } else {
+            ignoreButton.setLabel(L10N_ignore);
+            repairButton.setLabel(L10N_repair);
         }
 
-        ignoreButtonProperties.setPropertyValue("Enabled", ignore);
-        repairButtonProperties.setPropertyValue("Enabled", repair);
+        ignoreButtonProperties.setPropertyValue("Enabled", ignorable);
+        repairButtonProperties.setPropertyValue("Enabled", repairable);
         helpButtonProperties.setPropertyValue("HelpURL", getHelpURL(selectedCheck));
+        helpButtonProperties.setPropertyValue("Enabled", false);
     }
 
     private String getHelpURL(Check check) {
@@ -886,7 +902,7 @@ public class AccessibilityPanel extends ComponentBase
 
         String image = "";
         String text = "";
-        switch (manager.getCheckStatus(check)) {
+        switch (manager.getStatus(check)) {
             case IGNORED:
                 image = "gray_15x20.png";
                 text = "IGNORED";
@@ -938,16 +954,16 @@ public class AccessibilityPanel extends ComponentBase
         XMutableTreeNode parent = child2ParentMap.get(AnyConverter.toInt(d));
         if (parent == null) { return false; }
 
-        String image = "";
-        switch (manager.getIssueStatus(issue)) {
+      //String image = "";
+        switch (manager.getStatus(issue)) {
             case IGNORED:
-                image = "gray_15x20.png";
+              //image = "gray_15x20.png";
                 break;
             case REPAIRED:
                 if (!showRepairedIssues) {
                     try {
                         issue2NodeMap.remove(issue);
-                        if (issue.getElement().getType() == Element.Type.DOCUMENT) {
+                        if (issue.getElement() == null) {
                             check2NodeMap.remove(issue.getCheck());
                         }
                         ignoreSelectionEvent = true;
@@ -957,74 +973,74 @@ public class AccessibilityPanel extends ComponentBase
                     } catch (IndexOutOfBoundsException e) {
                     }
                 }
-                image = "green_15x20.png";
+              //image = "green_15x20.png";
                 break;
             case ALERT:
-                image = "orange_15x20.png";
+              //image = "orange_15x20.png";
                 break;
             case ERROR:
-                image = "red_15x20.png";
+              //image = "red_15x20.png";
                 break;
         }
 
-        //node.setNodeGraphicURL(imageDir + "/" + image);
+      //node.setNodeGraphicURL(imageDir + "/" + image);
         return true;
     }
 
     private boolean focus(Element element)
                    throws IllegalArgumentException,
                           NoSuchElementException,
-                          WrappedTargetException {
+                          WrappedTargetException,
+                          Exception {
 
-        removeSelection();
+        if (element == null) {
+            removeSelection();
+            return true;
+        }
 
         if (element.exists()) {
+            removeSelection();
+        } else {
+            return false;
+        }
 
-            switch(element.getType()) {
-                case DOCUMENT:
-                    return true;
+        if (element instanceof Paragraph) {
 
-                case PARAGRAPH:
-                    XTextContent paragraph = element.getParagraph();
-                    if (paragraph != null) {
-                        return selectionSupplier.select(paragraph.getAnchor());
-                    }
-                    break;
+            XTextContent paragraph = ((Paragraph)element).getComponent();
+            if (paragraph != null) {
+                return selectionSupplier.select(paragraph.getAnchor());
+            }
 
-                case SPAN:
-                    XTextContent[] text = element.getSpan();
-                    if (text != null) {
-                        viewCursor.gotoRange(text[0].getAnchor().getEnd(), false);
-                        viewCursor.gotoRange(text[1].getAnchor().getStart(), true);
-                        return true;
-                    }
-                    break;
+        } else if (element instanceof Span) {
 
-                case TABLE:
-                    XTextTable table = element.getTable();
-                    if (table != null) {
-                        String[] cellNames = table.getCellNames();
-                        viewCursor.gotoRange((XTextRange)UnoRuntime.queryInterface(
-                                              XTextRange.class, table.getCellByName(cellNames[cellNames.length - 1])), false);
-                        if (cellNames.length > 1) {
-                            XCellRange cellRange = (XCellRange)UnoRuntime.queryInterface(XCellRange.class, table);
-                            XTextTableCursor cursor = table.createCursorByCellName(cellNames[0]);
-                            cursor.gotoCellByName(cellNames[cellNames.length - 1], true);
-                            selectionSupplier.select(cellRange.getCellRangeByName(cursor.getRangeName()));
-                        }
-                        return true;
-                    }
-                    break;
+            XTextContent[] text = ((Span)element).getComponent();
+            if (text != null) {
+                viewCursor.gotoRange(text[0].getAnchor().getEnd(), false);
+                viewCursor.gotoRange(text[1].getAnchor().getStart(), true);
+                return true;
+            }
 
-                case OBJECT:
-                    XNamed object = element.getObject();
-                    if (object != null) {
-                        return selectionSupplier.select(object);
-                    }
-                    break;
+        } else if (element instanceof Table) {
 
-                default:
-                    return false;
+            XTextTable table = ((Table)element).getComponent();
+            if (table != null) {
+                String[] cellNames = table.getCellNames();
+                viewCursor.gotoRange((XTextRange)UnoRuntime.queryInterface(
+                                      XTextRange.class, table.getCellByName(cellNames[cellNames.length - 1])), false);
+                if (cellNames.length > 1) {
+                    XCellRange cellRange = (XCellRange)UnoRuntime.queryInterface(XCellRange.class, table);
+                    XTextTableCursor cursor = table.createCursorByCellName(cellNames[0]);
+                    cursor.gotoCellByName(cellNames[cellNames.length - 1], true);
+                    selectionSupplier.select(cellRange.getCellRangeByName(cursor.getRangeName()));
+                }
+                return true;
+            }
+
+        } else if (element instanceof DrawObject) {
+
+            XNamed object = ((DrawObject)element).getComponent();
+            if (object != null) {
+                return selectionSupplier.select(object);
             }
         }
 

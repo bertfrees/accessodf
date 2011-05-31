@@ -14,12 +14,9 @@ import com.sun.star.lang.Locale;
 import com.sun.star.style.ParagraphAdjust;
 import com.sun.star.table.XTableRows;
 
-import com.sun.star.container.NoSuchElementException;
 import com.sun.star.lang.WrappedTargetException;
-import com.sun.star.lang.IndexOutOfBoundsException;
 import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.beans.UnknownPropertyException;
-import com.sun.star.beans.PropertyVetoException;
 
 import be.docarch.accessibility.Check;
 
@@ -29,7 +26,7 @@ import be.docarch.accessibility.Check;
  */
 public class InternalRepairer implements Repairer {
 
-    private Collection<Check> checks;
+    private Collection<Check> supportedChecks;
     private Document document;
     private static XDispatchHelper dispatcher;
     private static XDispatchProvider dispatchProvider;
@@ -45,22 +42,25 @@ public class InternalRepairer implements Repairer {
         dispatchProvider = (XDispatchProvider)UnoRuntime.queryInterface(
                                 XDispatchProvider.class, document.xModel.getCurrentController().getFrame());
 
-        checks = new HashSet<Check>();
-        checks.add(new GeneralCheck(GeneralCheck.ID.A_ImageWithoutAlt));
-        checks.add(new DaisyCheck(DaisyCheck.ID.A_EmptyTitleField));
+        supportedChecks = new HashSet<Check>();
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_ImageWithoutAlt));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_FormulaWithoutAlt));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_ObjectWithoutAlt));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_DefaultLanguage));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoTableHeading));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_JustifiedText));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoSubtitle));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_BreakRows));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyTitle));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyHeading));
+        supportedChecks.add(new DaisyCheck(DaisyCheck.ID.A_EmptyTitleField));
     }
 
     public String getIdentifier() {
         return "be.docarch.accessibility.ooo.InternalRepairer";
     }
 
-    public Collection<Check> getChecks() {
-        return checks;
-    }
-
     public boolean repair(Issue issue) {
-
-        boolean succes = false;
 
         try {
 
@@ -70,10 +70,7 @@ public class InternalRepairer implements Repairer {
             Element element = issue.getElement();
 
             if (check != null &&
-                element != null &&
-                check.getClass() == GeneralCheck.class &&
-               (check.getRepairMode() == Check.RepairMode.AUTO ||
-                check.getRepairMode() == Check.RepairMode.SEMI_AUTOMATED)) {
+                supports(check)) {
 
                 String id = check.getIdentifier();
                 
@@ -83,27 +80,41 @@ public class InternalRepairer implements Repairer {
 
                     dispatchProperties = new PropertyValue[]{};
                     dispatcher.executeDispatch(dispatchProvider, ".uno:ObjectTitleDescription", "", 0, dispatchProperties);
-                    properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, element.getObject());
-                    succes = (AnyConverter.toString(properties.getPropertyValue("Title")).length() +
-                              AnyConverter.toString(properties.getPropertyValue("Description")).length() > 0);
+
+                    if (element == null) { return false; }
+                    try {
+                        properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, ((DrawObject)element).getComponent());
+                        return (AnyConverter.toString(properties.getPropertyValue("Title")).length() +
+                                AnyConverter.toString(properties.getPropertyValue("Description")).length() > 0);
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
+                    }
 
                 } else if (id.equals(DaisyCheck.ID.A_EmptyTitleField.name())) {
 
                     dispatchProperties = new PropertyValue[]{};
-                    dispatcher.executeDispatch(dispatchProvider, ".uno:SetDocumentProperties",  "", 0, dispatchProperties);
-                    succes = (document.docProperties.getTitle().length() > 0);
+                    dispatcher.executeDispatch(dispatchProvider, ".uno:SetDocumentProperties", "", 0, dispatchProperties);
+                    return (document.docProperties.getTitle().length() > 0);
 
                 } else if (id.equals(GeneralCheck.ID.A_LinkedImage.name())) {
 
                     dispatchProperties = new PropertyValue[]{};
-                    dispatcher.executeDispatch(dispatchProvider, ".uno:GraphicDialog",          "", 0, dispatchProperties);
+                    dispatcher.executeDispatch(dispatchProvider, ".uno:GraphicDialog", "", 0, dispatchProperties);
+
+                    // TODO: check again
 
                 } else if (id.equals(GeneralCheck.ID.A_NoTableHeading.name())) {
 
                     dispatchProperties = new PropertyValue[]{};
-                    dispatcher.executeDispatch(dispatchProvider, ".uno:TableDialog",            "", 0, dispatchProperties);
-                    succes = AnyConverter.toBoolean(((XPropertySet)UnoRuntime.queryInterface(XPropertySet.class,
-                                element.getTable())).getPropertyValue("RepeatHeadline"));
+                    dispatcher.executeDispatch(dispatchProvider, ".uno:TableDialog", "", 0, dispatchProperties);
+
+                    if (element == null) { return false; }
+                    try {
+                        return AnyConverter.toBoolean(((XPropertySet)UnoRuntime.queryInterface(XPropertySet.class,
+                                    ((Table)element).getComponent())).getPropertyValue("RepeatHeadline"));
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
+                    }
 
                 } else if (id.equals(GeneralCheck.ID.E_DefaultLanguage.name())) {
 
@@ -111,63 +122,111 @@ public class InternalRepairer implements Repairer {
                         dispatchProperties[0] = new PropertyValue();
                         dispatchProperties[0].Name = "Language";
                         dispatchProperties[0].Value = "*";
-                        dispatcher.executeDispatch(dispatchProvider, ".uno:LanguageStatus",         "", 0, dispatchProperties);
-                        succes = !(((Locale)AnyConverter.toObject(
+                        dispatcher.executeDispatch(dispatchProvider, ".uno:LanguageStatus", "", 0, dispatchProperties);
+                        return !(((Locale)AnyConverter.toObject(
                                      Locale.class, document.docPropertySet.getPropertyValue("CharLocale"))).Language.equals("zxx"));
 
                 } else if (id.equals(GeneralCheck.ID.A_NoSubtitle.name())) {
 
-                    properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class,
-                            element.getParagraph());
-                    if (document.paragraphStyles.getByName("Subtitle") != null) {
-                        properties.setPropertyValue("ParaStyleName", "Subtitle");
-                        succes = true;
+                    if (element == null) { return false; }
+                    try {
+                        properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, ((Paragraph)element).getComponent());
+                        if (document.paragraphStyles.getByName("Subtitle") != null) {
+                            properties.setPropertyValue("ParaStyleName", "Subtitle");
+                            return true;
+                        }
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
                     }
 
                 } else if (id.equals(GeneralCheck.ID.A_JustifiedText.name())) {
 
-                    properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class,
-                            element.getParagraph());
-                    properties.setPropertyValue("ParaAdjust", ParagraphAdjust.LEFT_value);
-                    properties = (XPropertySet)UnoRuntime.queryInterface(
-                                   XPropertySet.class, document.paragraphStyles.getByName(
-                                   AnyConverter.toString(properties.getPropertyValue("ParaStyleName"))));
-                    int paraAdjust = AnyConverter.toInt(properties.getPropertyValue("ParaAdjust"));
-                    if (paraAdjust == ParagraphAdjust.BLOCK_value ||
-                        paraAdjust == ParagraphAdjust.STRETCH_value) {
+                    if (element == null) { return false; }
+                    try {
+                        properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, ((Paragraph)element).getComponent());
                         properties.setPropertyValue("ParaAdjust", ParagraphAdjust.LEFT_value);
+                        properties = (XPropertySet)UnoRuntime.queryInterface(
+                                       XPropertySet.class, document.paragraphStyles.getByName(
+                                       AnyConverter.toString(properties.getPropertyValue("ParaStyleName"))));
+                        int paraAdjust = AnyConverter.toInt(properties.getPropertyValue("ParaAdjust"));
+                        if (paraAdjust == ParagraphAdjust.BLOCK_value ||
+                            paraAdjust == ParagraphAdjust.STRETCH_value) {
+                            properties.setPropertyValue("ParaAdjust", ParagraphAdjust.LEFT_value);
+                        }
+                        return true;
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
                     }
-                    succes = true;
 
                 } else if (id.equals(GeneralCheck.ID.E_EmptyTitle.name()) ||
                            id.equals(GeneralCheck.ID.E_EmptyHeading.name())) {
 
-                    properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class,
-                            element.getParagraph());
-                    properties.setPropertyValue("ParaStyleName", "Standard");
-                    succes = true;
+                    if (element == null) { return false; }
+                    try {
+                        properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, ((Paragraph)element).getComponent());
+                        properties.setPropertyValue("ParaStyleName", "Standard");
+                        return true;
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
+                    }
 
                 } else if (id.equals(GeneralCheck.ID.A_BreakRows.name())) {
 
-                    XTableRows tableRows = element.getTable().getRows();
-                    XPropertySet rowProperties = null;
-                    for (int i=0; i<tableRows.getCount(); i++) {
-                        rowProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, tableRows.getByIndex(i));
-                        if (rowProperties.getPropertySetInfo().hasPropertyByName("IsSplitAllowed")) {
-                            rowProperties.setPropertyValue("IsSplitAllowed", false);
+                    if (element == null) { return false; }
+                    try {
+                        XTableRows tableRows = ((Table)element).getComponent().getRows();
+                        XPropertySet rowProperties = null;
+                        for (int i=0; i<tableRows.getCount(); i++) {
+                            rowProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, tableRows.getByIndex(i));
+                            if (rowProperties.getPropertySetInfo().hasPropertyByName("IsSplitAllowed")) {
+                                rowProperties.setPropertyValue("IsSplitAllowed", false);
+                            }
                         }
+                        return true;
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
                     }
-                    succes = true;
                 }
             }
-        } catch (NoSuchElementException e) {
         } catch (WrappedTargetException e) {
         } catch (UnknownPropertyException e) {
-        } catch (PropertyVetoException e) {
-        } catch (IndexOutOfBoundsException e) {
         } catch (IllegalArgumentException e) {
         }
 
-        return succes;
+        return false;
+    }
+
+    public RepairMode getRepairMode(Check check)
+                             throws java.lang.IllegalArgumentException {
+
+        if (supports(check)) {
+
+            String id = check.getIdentifier();
+
+            if (id.equals(GeneralCheck.ID.A_ImageWithoutAlt.name()) ||
+                id.equals(GeneralCheck.ID.A_FormulaWithoutAlt.name()) ||
+                id.equals(GeneralCheck.ID.A_ObjectWithoutAlt.name()) ||
+                id.equals(GeneralCheck.ID.E_DefaultLanguage.name()) ||
+                id.equals(GeneralCheck.ID.A_NoTableHeading.name()) ||
+                id.equals(DaisyCheck.ID.A_EmptyTitleField.name())) {
+
+                return RepairMode.SEMI_AUTOMATED;
+
+            } else if (id.equals(GeneralCheck.ID.A_JustifiedText.name()) ||
+                id.equals(GeneralCheck.ID.A_NoSubtitle.name()) ||
+                id.equals(GeneralCheck.ID.A_BreakRows.name()) ||
+                id.equals(GeneralCheck.ID.E_EmptyTitle.name()) ||
+                id.equals(GeneralCheck.ID.E_EmptyHeading.name())) {
+
+                return RepairMode.AUTO;
+
+            }
+        }
+
+        throw new java.lang.IllegalArgumentException("Check is not supported");
+    }
+
+    public boolean supports(Check check) {
+        return supportedChecks.contains(check);
     }
 }

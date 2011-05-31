@@ -12,7 +12,9 @@
         <node oor:name="States">
             <node oor:name="private:resource/toolpanel/be.docarch.accessibility.ooo.toolpanel" oor:op="replace">
                 <prop oor:name="UIName" oor:type="xs:string">
-                    <value xml:lang="en-US">Accessibility</value>
+                    <value xml:lang="en">Accessibility</value>
+					<value xml:lang="es">Accesibilidad</value>
+					<value xml:lang="nl">Toegankelijkheid</value>
                 </prop>
             </node>
         </node>

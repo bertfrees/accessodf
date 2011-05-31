@@ -7,6 +7,8 @@
         <prop oor:name="Title" oor:type="xs:string">
           <value/>
           <value xml:lang="en">Accessibility</value>
+		  <value xml:lang="es">Accesibilidad</value>
+		  <value xml:lang="nl">Toegankelijkheid</value>
         </prop>
         <prop oor:name="Target" oor:type="xs:string">
           <value>_self</value>

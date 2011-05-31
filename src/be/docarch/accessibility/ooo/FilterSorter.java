@@ -65,12 +65,6 @@ public class FilterSorter implements java.util.Comparator<Issue> {
             return -1;
         } else if (entry2 == null) {
             return 1;
-        } else if (!entry1.valid() && !entry2.valid()) {
-            return 0;
-        } else if (!entry1.valid()) {
-            return -1;
-        } else if (!entry2.valid()) {
-            return 1;
         }
 
         Property property;
@@ -107,11 +101,6 @@ public class FilterSorter implements java.util.Comparator<Issue> {
     }
 
     public boolean accept(Issue entry) {
-
-        if (entry != null) {
-            return entry.valid();
-        } else {
-            return false;
-        }
+        return (entry != null);
     }
 }

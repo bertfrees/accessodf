@@ -58,7 +58,7 @@ public class Issue {
 
         Issue.document = document;
         Issue.checks = checks;
-        Element.init(document);
+        Element.initialise(document);
 
     }
 
@@ -67,7 +67,8 @@ public class Issue {
           throws IllegalArgumentException,
                  RepositoryException,
                  NoSuchElementException,
-                 WrappedTargetException {
+                 WrappedTargetException,
+                 Exception {
 
         logger.entering("Issue", "<init>");
 
@@ -102,7 +103,27 @@ public class Issue {
             if (graph.getStatements(testresult, URIs.EARL_OUTCOME, URIs.EARL_PASSED).hasMoreElements()) {
                 repaired = true;
             }
-            element = new Element(testsubject);
+            
+            XEnumeration types = graph.getStatements(testsubject, URIs.RDF_TYPE, null);            
+            if (!types.hasMoreElements()) {
+                return;
+            }
+            
+            String t = ((Statement)types.nextElement()).Object.getStringValue();
+            if (t.equals(Constants.CHECKER_DOCUMENT)) {
+                element = null;
+            } else if (t.equals(Constants.CHECKER_PARAGRAPH)) {
+                element = new Paragraph(testsubject);
+            } else if (t.equals(Constants.CHECKER_SPAN)) {
+                element = new Span(testsubject);
+            } else if (t.equals(Constants.CHECKER_TABLE)) {
+                element = new Table(testsubject);
+            } else if (t.equals(Constants.CHECKER_OBJECT)) {
+                element = new DrawObject(testsubject);
+            } else {
+                return;
+            }
+
             check = checks.get(testcase.getLocalName());
             if (check == null) {
                 return;
@@ -134,14 +155,10 @@ public class Issue {
             logger.log(Level.SEVERE, null, ex);
         } finally {
             if (!valid) {
-                logger.info("invalid assertion");
+                throw new Exception("Invalid assertion");
             }
             logger.exiting("Issue", "<init>");
         }
-    }
-    
-    public boolean valid() {
-        return valid;
     }
 
     public Element getElement() {
@@ -207,15 +224,16 @@ public class Issue {
     }
 
     public String getName() {
-        return element.toString();
+
+        if (element == null) {
+            return "";
+        } else {
+            return element.toString();
+        }
     }
 
     public Check.Category getCategory() {
-
-        if (check != null) {
-            return check.getCategory();
-        }
-        return null;
+        return check.getCategory();
     }
 
     @Override
@@ -223,13 +241,11 @@ public class Issue {
 
         final int PRIME = 31;
         int hash = 1;
+        hash = hash * PRIME + check.hashCode();
         if (element != null) {
-            hash = hash * PRIME + element.hashCode(); }
-            if (check != null)   {
-                hash = hash * PRIME + check.hashCode();
-            }
+            hash = hash * PRIME + element.hashCode();
+        }
         return hash;
-
    }
 
     @Override
@@ -242,7 +258,13 @@ public class Issue {
         if (getClass() != obj.getClass())
             return false;
         final Issue that = (Issue)obj;
-        return (getElement().equals(that.getElement()) &&
-                getCheck().equals(that.getCheck()));
+        if (!this.check.equals(that.check)) {
+            return false;
+        }
+        if (this.element == null) {
+            return (that.element == null);
+        } else {
+            return this.element.equals(that.element);
+        }
     }
 }

@@ -9,10 +9,6 @@ public abstract class Check {
     public static enum Status { ALERT,
                                 ERROR };
 
-    public static enum RepairMode { MANUAL,
-                                    AUTO,
-                                    SEMI_AUTOMATED};
-
     public static enum Category { GRAPHICS,
                                   HEADINGS,
                                   LANGUAGE,
@@ -36,8 +32,6 @@ public abstract class Check {
     public abstract String getDescription();
 
     public abstract String getSuggestion();
-
-    public abstract RepairMode getRepairMode();
 
     @Override
     public int hashCode() {

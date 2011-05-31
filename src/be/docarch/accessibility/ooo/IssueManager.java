@@ -34,6 +34,7 @@ import be.docarch.accessibility.Checker;
 import be.docarch.accessibility.ExternalChecker;
 import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Report;
+import be.docarch.accessibility.ooo.Repairer.RepairMode;
 
 /**
  *
@@ -51,15 +52,14 @@ public class IssueManager {
     private Settings settings = null;
     private InternalChecker internalChecker = null;
     private List<ExternalChecker> externalCheckers = null;
-    private Repairer repairer = null;
 
     private List<Issue> allIssues = null;
     private FilterSorter filterSorter = null;
     private Issue selectedIssue = null;
     private Check selectedCheck = null;
     private Map<Check,List<Issue>> check2IssuesMap = null;
-    //private Map<Check,Checker> check2checkerMap = null;
-    //private Map<Check,Repairer> check2repairerMap = null;
+  //private Map<Check,Checker> check2checkerMap = null;
+    private Map<Check,Repairer> check2repairerMap = null;
 
     public IssueManager(Document document,
                         InternalChecker internalChecker,
@@ -78,20 +78,25 @@ public class IssueManager {
         this.internalChecker = internalChecker;
         this.externalCheckers = externalCheckers;
         settings = new Settings(document.xContext);
-        repairer = new InternalRepairer(document);
-
-        //check2checkerMap = new HashMap<Check,Checker>();
-        //check2repairerMap = new HashMap<Check,Repairer>();
+      //check2checkerMap = new HashMap<Check,Checker>();
+        check2repairerMap = new HashMap<Check,Repairer>();
+        Repairer repairer = new InternalRepairer(document);
 
         Map<String,Check> checks = new TreeMap<String,Check>();
         for (Check check : internalChecker.getChecks()) {
             checks.put(check.getIdentifier(), check);
-            //check2checkerMap.put(check, internalChecker);
+          //check2checkerMap.put(check, internalChecker);
+            if (repairer.supports(check)) {
+                check2repairerMap.put(check, repairer);
+            }
         }
         for (Checker checker : externalCheckers) {
             for (Check check : checker.getChecks()) {
                 checks.put(check.getIdentifier(), check);
-                //check2checkerMap.put(check, checker);
+              //check2checkerMap.put(check, checker);
+                if (repairer.supports(check)) {
+                    check2repairerMap.put(check, repairer);
+                }
             }
         }
         Issue.init(document, checks);
@@ -184,8 +189,7 @@ public class IssueManager {
                                        RepositoryException,
                                        WrappedTargetException,
                                        IllegalArgumentException,
-                                       PropertyVetoException,
-                                       ParseException {
+                                       PropertyVetoException {
 
         logger.entering("IssueManager", "loadMetadata");
 
@@ -203,14 +207,17 @@ public class IssueManager {
             XResource assertion = null;
             while (assertions.hasMoreElements()) {
                 assertion = ((Statement)assertions.nextElement()).Subject;
-                issue = new Issue(assertion, accessibilityDataGraph);
-                if (!issue.valid()) {
-                    break;
+                try {
+                    issue = new Issue(assertion, accessibilityDataGraph);
+                } catch (Exception e) {
+                    continue;
                 }
-                if (!issue.getElement().exists()) {
-                    logger.info("Element does not exist, removing issue");
-                    issue.remove();
-                    break;
+                if (issue.getElement() != null) {
+                    if (!issue.getElement().exists()) {
+                        logger.info("Element does not exist, removing issue");
+                        issue.remove();
+                        continue;
+                    }
                 }
                 if (allIssues.contains(issue)) {
                     sameIssue = allIssues.remove(allIssues.indexOf(issue));
@@ -272,9 +279,25 @@ public class IssueManager {
                           NoSuchElementException {
 
         if (issue == null) { return false; }
-        boolean succes = repairer.repair(issue);
+        Repairer r = check2repairerMap.get(issue.getCheck());
+        if (r == null) { return false; }
+        boolean succes = r.repair(issue);
         issue.repaired(succes);
         return succes;
+    }
+
+    public boolean repairable(Check check) {
+        return check2repairerMap.containsKey(check);
+    }
+
+    public RepairMode getRepairMode(Check check)
+                             throws java.lang.IllegalArgumentException {
+
+        Repairer r = check2repairerMap.get(check);
+        if (r == null) { 
+            throw new java.lang.IllegalArgumentException();
+        }
+        return r.getRepairMode(check);
     }
 
     public void arrangeIssues() {
@@ -304,34 +327,42 @@ public class IssueManager {
         return check2IssuesMap.get(check);
     }
 
-    public Status getCheckStatus(Check check) {
+    public Status getStatus(Object o) {
 
-        boolean alert = (check.getStatus() == Check.Status.ALERT);
-        boolean allRepaired = true;
-        boolean allIgnored = true;
-        for (Issue issue : check2IssuesMap.get(check)) {
-            if (!issue.ignored()) {
-                allIgnored = false;
-                if (!issue.repaired()) {
-                    allRepaired = false;
-                    break;
+        if (o != null) {
+            if (o instanceof Check) {
+
+                Check check = (Check)o;
+                boolean alert = (check.getStatus() == Check.Status.ALERT);
+                boolean allRepaired = true;
+                boolean allIgnored = true;
+                for (Issue issue : check2IssuesMap.get(check)) {
+                    if (!issue.ignored()) {
+                        allIgnored = false;
+                        if (!issue.repaired()) {
+                            allRepaired = false;
+                            break;
+                        }
+                    }
                 }
+                return (allIgnored?  Status.IGNORED:
+                        allRepaired? Status.REPAIRED:
+                        alert?       Status.ALERT:
+                                     Status.ERROR);
+
+            } else if (o instanceof Issue) {
+
+                Issue issue = (Issue)o;
+                boolean alert = (issue.getCheck().getStatus() == Check.Status.ALERT);
+
+                return (issue.ignored()?  Status.IGNORED:
+                        issue.repaired()? Status.REPAIRED:
+                        alert?            Status.ALERT:
+                                          Status.ERROR);
             }
         }
-        return (allIgnored?  Status.IGNORED:
-                allRepaired? Status.REPAIRED:
-                alert?       Status.ALERT:
-                             Status.ERROR);
-    }
 
-    public Status getIssueStatus(Issue issue) {
-
-        boolean alert = (issue.getCheck().getStatus() == Check.Status.ALERT);
-
-        return (issue.ignored()?  Status.IGNORED:
-                issue.repaired()? Status.REPAIRED:
-                alert?            Status.ALERT:
-                                  Status.ERROR);
+        return null;
     }
 
     public Issue selectedIssue() {

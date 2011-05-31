@@ -198,25 +198,4 @@ public class GeneralCheck extends Check {
             return identifier.name();
         }
     }
-
-    public RepairMode getRepairMode() {
-
-        switch (identifier) {
-            case A_ImageWithoutAlt:
-            case A_FormulaWithoutAlt:
-            case A_ObjectWithoutAlt:
-            case E_DefaultLanguage:
-            case A_NoTableHeading:
-                return RepairMode.SEMI_AUTOMATED;
-            case A_JustifiedText:
-            case A_NoSubtitle:
-            case A_BreakRows:
-            case E_EmptyTitle:
-            case E_EmptyHeading:
-                return RepairMode.AUTO;
-            case A_LinkedImage:
-            default:
-                return RepairMode.MANUAL;
-        }
-    }
 }
