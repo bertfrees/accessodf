@@ -21,16 +21,17 @@ import com.sun.star.container.NoSuchElementException;
 import com.sun.star.rdf.RepositoryException;
 import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.IllegalArgumentException;
-import com.sun.star.beans.PropertyVetoException;
 
 import be.docarch.accessibility.Check;
+import be.docarch.accessibility.Element;
+import be.docarch.accessibility.Issue;
 import be.docarch.accessibility.Constants;
 
 /**
  *
  * @author Bert Frees
  */
-public class Issue {
+public class RDFIssue extends Issue {
 
     private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
     
@@ -45,24 +46,20 @@ public class Issue {
     private Element element = null;
     private Check check = null;
     private String checker = null;
-    private boolean valid = false;
     private boolean ignored = false;
     private boolean repaired = false;
-    protected int index = 0;
-    protected int position = 0;
-    protected Date checkDate = null;
+    private Date checkDate = null;
 
-    static void init(Document document,
-                     Map<String,Check> checks)
-              throws IllegalArgumentException {
+    static void initialise(Document document,
+                           Map<String,Check> checks)
+                    throws IllegalArgumentException {
 
-        Issue.document = document;
-        Issue.checks = checks;
-        Element.initialise(document);
-
+        RDFIssue.document = document;
+        RDFIssue.checks = checks;
+        FocusableElement.initialise(document);
     }
 
-    public Issue(XResource assertion,
+    public RDFIssue(XResource assertion,
                  XNamedGraph graph)
           throws IllegalArgumentException,
                  RepositoryException,
@@ -71,6 +68,8 @@ public class Issue {
                  Exception {
 
         logger.entering("Issue", "<init>");
+
+        boolean valid = false;
 
         try {
 
@@ -173,44 +172,6 @@ public class Issue {
         return repaired;
     }
 
-    public void ignored(boolean ignored)
-                 throws IllegalArgumentException,
-                        PropertyVetoException,
-                        RepositoryException,
-                        NoSuchElementException{
-
-        this.ignored = ignored;
-        graph.removeStatements(testresult, URIs.CHECKER_IGNORE, null);
-        if (ignored) {
-            graph.addStatement(testresult, URIs.CHECKER_IGNORE, Literal.create(document.xContext, "true"));
-        }
-        document.setModified();
-    }
-
-    public void repaired(boolean repaired)
-                  throws IllegalArgumentException,
-                         RepositoryException,
-                         PropertyVetoException,
-                         NoSuchElementException {
-
-        this.repaired = repaired;
-        graph.removeStatements(testresult, URIs.EARL_OUTCOME, null);
-        if (repaired) {
-            graph.addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_PASSED);
-        } else {
-            graph.addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_FAILED);
-        }
-        document.setModified();
-    }
-
-    public void remove() throws NoSuchElementException,
-                                RepositoryException,
-                                PropertyVetoException {
-    
-        graph.removeStatements(assertion, null, null);
-        document.setModified();
-    }
-
     public Date getCheckDate() {
         return checkDate;
     }
@@ -223,48 +184,51 @@ public class Issue {
         return checker;
     }
 
-    public String getName() {
+    public void ignored(boolean ignored) {
 
-        if (element == null) {
-            return "";
-        } else {
-            return element.toString();
+        try {
+
+            this.ignored = ignored;
+            graph.removeStatements(testresult, URIs.CHECKER_IGNORE, null);
+            if (ignored) {
+                graph.addStatement(testresult, URIs.CHECKER_IGNORE, Literal.create(document.xContext, "true"));
+            }
+            document.setModified();
+
+        } catch (IllegalArgumentException e) {
+        } catch (RepositoryException e) {
+        } catch (NoSuchElementException e) {
         }
     }
 
-    public Check.Category getCategory() {
-        return check.getCategory();
+    public void repaired(boolean repaired) {
+
+        try {
+
+            this.repaired = repaired;
+            graph.removeStatements(testresult, URIs.EARL_OUTCOME, null);
+            if (repaired) {
+                graph.addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_PASSED);
+            } else {
+                graph.addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_FAILED);
+            }
+            document.setModified();
+
+        } catch (IllegalArgumentException e) {
+        } catch (RepositoryException e) {
+        } catch (NoSuchElementException e) {
+        }
     }
 
-    @Override
-    public int hashCode() {
+    public void remove() {
 
-        final int PRIME = 31;
-        int hash = 1;
-        hash = hash * PRIME + check.hashCode();
-        if (element != null) {
-            hash = hash * PRIME + element.hashCode();
-        }
-        return hash;
-   }
+        try {
 
-    @Override
-    public boolean equals(Object obj) {
+            graph.removeStatements(assertion, null, null);
+            document.setModified();
 
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final Issue that = (Issue)obj;
-        if (!this.check.equals(that.check)) {
-            return false;
-        }
-        if (this.element == null) {
-            return (that.element == null);
-        } else {
-            return this.element.equals(that.element);
+        } catch (NoSuchElementException e) {
+        } catch (RepositoryException e) {
         }
     }
 }

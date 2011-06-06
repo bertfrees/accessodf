@@ -19,14 +19,14 @@ import com.sun.star.lang.IllegalArgumentException;
  *
  * @author Bert Frees
  */
-public class Span extends Element {
+public class Span extends FocusableElement {
 
     private boolean exists = false;
     private String startId = "";
     private String endId = "";
     private String sample = "";
 
-    private XTextContent[] component = null;
+    private XTextContent[] xTextContent = null;
 
     public Span(XResource testsubject)
          throws RepositoryException,
@@ -54,7 +54,7 @@ public class Span extends Element {
                           XServiceInfo.class, startComponent)).supportsService("com.sun.star.text.InContentMetadata") &&
                         ((XServiceInfo)UnoRuntime.queryInterface(
                           XServiceInfo.class, endComponent)).supportsService("com.sun.star.text.InContentMetadata")) {
-                        component = new XTextContent[] { startComponent, endComponent };
+                        xTextContent = new XTextContent[] { startComponent, endComponent };
                         exists = true;
                         if (samples.hasMoreElements()) {
                             sample = ((Statement)samples.nextElement()).Object.getStringValue();
@@ -74,7 +74,7 @@ public class Span extends Element {
     public XTextContent[] getComponent() throws Exception {
 
         if (exists()) {
-            return component;
+            return xTextContent;
         } else {
             throw new Exception("Span does not exist");
         }
@@ -105,5 +105,19 @@ public class Span extends Element {
         return (!(this.exists()^that.exists()) &&
                   this.startId.equals(that.startId) &&
                   this.endId.equals(that.endId));
+    }
+
+    @Override
+    public boolean focus() {
+
+        if (!exists()) { return false; }
+
+        if (xTextContent != null) {
+            viewCursor.gotoRange(xTextContent[0].getAnchor().getEnd(), false);
+            viewCursor.gotoRange(xTextContent[1].getAnchor().getStart(), true);
+            return true;
+        }
+
+        return false;
     }
 }

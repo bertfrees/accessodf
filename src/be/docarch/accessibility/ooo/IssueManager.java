@@ -1,5 +1,6 @@
 package be.docarch.accessibility.ooo;
 
+import be.docarch.accessibility.FilterSorter;
 import java.util.Date;
 import java.util.logging.Logger;
 import java.util.ArrayList;
@@ -31,10 +32,14 @@ import com.sun.star.beans.PropertyVetoException;
 
 import be.docarch.accessibility.Check;
 import be.docarch.accessibility.Checker;
-import be.docarch.accessibility.ExternalChecker;
+import be.docarch.accessibility.Provider;
+import be.docarch.accessibility.RunnableChecker;
+import be.docarch.accessibility.RemoteRunnableChecker;
 import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Report;
-import be.docarch.accessibility.ooo.Repairer.RepairMode;
+import be.docarch.accessibility.Issue;
+import be.docarch.accessibility.Repairer;
+import be.docarch.accessibility.Repairer.RepairMode;
 
 /**
  *
@@ -50,20 +55,20 @@ public class IssueManager {
 
     private Document document = null;
     private Settings settings = null;
-    private InternalChecker internalChecker = null;
-    private List<ExternalChecker> externalCheckers = null;
-
+    private Provider<Checker> checkers = null;
+    private Provider<Repairer> repairers = null;
+    
     private List<Issue> allIssues = null;
     private FilterSorter filterSorter = null;
     private Issue selectedIssue = null;
     private Check selectedCheck = null;
     private Map<Check,List<Issue>> check2IssuesMap = null;
-  //private Map<Check,Checker> check2checkerMap = null;
+    private Map<Check,Checker> check2checkerMap = null;
     private Map<Check,Repairer> check2repairerMap = null;
 
     public IssueManager(Document document,
-                        InternalChecker internalChecker,
-                        List<ExternalChecker> externalCheckers)
+                        Provider<Checker> checkers,
+                        Provider<Repairer> repairers)
                  throws IllegalArgumentException,
                         NoSuchElementException,
                         RepositoryException,
@@ -75,31 +80,28 @@ public class IssueManager {
         logger.entering("IssueManager", "<init>");
 
         this.document = document;
-        this.internalChecker = internalChecker;
-        this.externalCheckers = externalCheckers;
-        settings = new Settings(document.xContext);
-      //check2checkerMap = new HashMap<Check,Checker>();
-        check2repairerMap = new HashMap<Check,Repairer>();
-        Repairer repairer = new InternalRepairer(document);
+        this.checkers = checkers;
+        this.repairers = repairers;
 
-        Map<String,Check> checks = new TreeMap<String,Check>();
-        for (Check check : internalChecker.getChecks()) {
-            checks.put(check.getIdentifier(), check);
-          //check2checkerMap.put(check, internalChecker);
-            if (repairer.supports(check)) {
-                check2repairerMap.put(check, repairer);
-            }
-        }
-        for (Checker checker : externalCheckers) {
+        settings = new Settings(document.xContext);
+        check2checkerMap = new HashMap<Check,Checker>();
+        check2repairerMap = new HashMap<Check,Repairer>();
+
+        Map<String,Check> allChecks = new TreeMap<String,Check>();
+
+        for (Checker checker : checkers.list()) {
             for (Check check : checker.getChecks()) {
-                checks.put(check.getIdentifier(), check);
-              //check2checkerMap.put(check, checker);
-                if (repairer.supports(check)) {
-                    check2repairerMap.put(check, repairer);
+                allChecks.put(check.getIdentifier(), check);
+                check2checkerMap.put(check, checker);
+                for (Repairer repairer : repairers.list()) {
+                    if (repairer.supports(check)) {
+                        check2repairerMap.put(check, repairer);
+                    }
                 }
             }
         }
-        Issue.init(document, checks);
+
+        RDFIssue.initialise(document, allChecks);
 
         check2IssuesMap = new HashMap<Check,List<Issue>>();
 
@@ -126,29 +128,30 @@ public class IssueManager {
                                  IOException,
                                  com.sun.star.uno.Exception {
 
-        // Extract accessibility issues from document and store in metadata
-        internalChecker.check();
-
-        // Get external accessibility reports and store in metadata
         settings.loadData();
         File odtFile = null;
 
-        for (ExternalChecker checker : externalCheckers) {
-            if (!settings.brailleChecks() && checker.getIdentifier().startsWith("be.docarch.odt2braille")) {
-                break;
-            }
-            if (odtFile == null) {
-                odtFile = File.createTempFile(TMP_NAME, ".odt", TMP_DIR);
-                odtFile.deleteOnExit();
-                document.ensureMetadataReferences();
-                document.storeToFile(odtFile);
-            }
-            checker.setOdtFile(odtFile);
-            if (checker.check()) {
-                Report report = checker.getAccessibilityReport();
-                if (report != null) {
-                    document.importAccessibilityData(report.getFile(), report.getName());
+        for (Checker checker : checkers.list()) {
+            if (checker instanceof RemoteRunnableChecker) {
+                if (!settings.brailleChecks() && checker.getIdentifier().startsWith("be.docarch.odt2braille")) {
+                    break;
                 }
+                if (odtFile == null) {
+                    odtFile = File.createTempFile(TMP_NAME, ".odt", TMP_DIR);
+                    odtFile.deleteOnExit();
+                    document.ensureMetadataReferences();
+                    document.storeToFile(odtFile);
+                }
+                RemoteRunnableChecker remoteChecker = (RemoteRunnableChecker)checker;
+                remoteChecker.setOdtFile(odtFile);
+                if (remoteChecker.run()) {
+                    Report report = remoteChecker.getAccessibilityReport();
+                    if (report != null) {
+                        document.importAccessibilityData(report.getFile(), report.getName());
+                    }
+                }
+            } else if (checker instanceof RunnableChecker) {
+                ((RunnableChecker)checker).run();
             }
         }
 
@@ -208,7 +211,7 @@ public class IssueManager {
             while (assertions.hasMoreElements()) {
                 assertion = ((Statement)assertions.nextElement()).Subject;
                 try {
-                    issue = new Issue(assertion, accessibilityDataGraph);
+                    issue = new RDFIssue(assertion, accessibilityDataGraph);
                 } catch (Exception e) {
                     continue;
                 }

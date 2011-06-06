@@ -1,6 +1,4 @@
-package be.docarch.accessibility.ooo;
-
-import be.docarch.accessibility.Check;
+package be.docarch.accessibility;
 
 /**
  *

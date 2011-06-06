@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.ServiceLoader;
 import java.util.ResourceBundle;
 import java.net.URLClassLoader;
 import java.net.URL;
@@ -55,14 +54,8 @@ import com.sun.star.awt.tree.XMutableTreeNode;
 import com.sun.star.ui.XToolPanel;
 import com.sun.star.deployment.PackageInformationProvider;
 import com.sun.star.deployment.XPackageInformationProvider;
-import com.sun.star.container.XNamed;
-import com.sun.star.text.XTextTableCursor;
-import com.sun.star.text.XTextRange;
-import com.sun.star.text.XTextTable;
-import com.sun.star.text.XTextContent;
 import com.sun.star.text.XTextViewCursor;
 import com.sun.star.text.XTextViewCursorSupplier;
-import com.sun.star.table.XCellRange;
 import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.view.XSelectionChangeListener;
 import com.sun.star.lib.uno.helper.ComponentBase;
@@ -179,7 +172,7 @@ public class AccessibilityPanel extends ComponentBase
         Locale oooLocale = Locale.getDefault();
 
         try {
-            oooLocale = new Locale(UnoUtils.getUILocale(xContext));
+            oooLocale = UnoUtils.getUILocale(xContext);
         } catch (com.sun.star.uno.Exception ex) {
         }
 
@@ -501,11 +494,10 @@ public class AccessibilityPanel extends ComponentBase
             XPackageInformationProvider xPkgInfo = PackageInformationProvider.get(xContext);
             imageDir = xPkgInfo.getPackageLocation("be.docarch.accessibility.ooo.accessibilitycheckeraddon") + "/images";
             document = new Document(xContext);
-            InternalChecker internalChecker = new InternalChecker(document);
-            List<ExternalChecker> externalCheckers = new ArrayList<ExternalChecker>();
 
-            // Find & load odt2braille package
+            // Find & load plugin Checkers & Repairers
 
+            List<URL> urls = new ArrayList<URL>();
             FileFilter jarFilter = new FileFilter() {
                 public boolean accept(File file) {
                     return file.getAbsolutePath().endsWith(".jar");
@@ -513,7 +505,6 @@ public class AccessibilityPanel extends ComponentBase
             String odt2braillePackage = xPkgInfo.getPackageLocation("be.docarch.odt2braille.ooo.odt2brailleaddon");
             if (odt2braillePackage.length() > 0) {
                 File dir = new File(odt2braillePackage.substring(6));
-                List<URL> urls = new ArrayList<URL>();
                 File[] jars = dir.listFiles(jarFilter);
                 for (File jar : jars) {
                     urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
@@ -524,13 +515,14 @@ public class AccessibilityPanel extends ComponentBase
                 for (File jar : jars) {
                     urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
                 }
-                URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[urls.size()]), ExternalChecker.class.getClassLoader());                
-                for (ExternalChecker checker : ServiceLoader.load(ExternalChecker.class, classLoader)) {
-                    externalCheckers.add(checker);
-                }
             }
 
-            manager = new IssueManager(document, internalChecker, externalCheckers);
+            URLClassLoader classLoader = new URLClassLoader(urls.toArray(new URL[urls.size()]), this.getClass().getClassLoader());
+            Provider<Checker> checkerProvider = new CheckerProvider(classLoader, document);
+            Provider<Repairer> repairerProvider = new RepairerProvider(classLoader, document);
+
+            manager = new IssueManager(document, checkerProvider, repairerProvider);
+
             selectionSupplier = (XSelectionSupplier)UnoRuntime.queryInterface(
                                  XSelectionSupplier.class, document.xModel.getCurrentController());
             XTextViewCursorSupplier xViewCursorSupplier =
@@ -826,12 +818,6 @@ public class AccessibilityPanel extends ComponentBase
             focus(selectedElement);
             focusedIssue = selectedIssue;
 
-        } catch (IllegalArgumentException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (NoSuchElementException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (WrappedTargetException e) {
-            logger.log(Level.SEVERE, null, e);
         } catch (Exception e) {
             logger.log(Level.SEVERE, null, e);
         }
@@ -987,11 +973,7 @@ public class AccessibilityPanel extends ComponentBase
         return true;
     }
 
-    private boolean focus(Element element)
-                   throws IllegalArgumentException,
-                          NoSuchElementException,
-                          WrappedTargetException,
-                          Exception {
+    private boolean focus(Element element) {
 
         if (element == null) {
             removeSelection();
@@ -1000,60 +982,24 @@ public class AccessibilityPanel extends ComponentBase
 
         if (element.exists()) {
             removeSelection();
-        } else {
-            return false;
-        }
-
-        if (element instanceof Paragraph) {
-
-            XTextContent paragraph = ((Paragraph)element).getComponent();
-            if (paragraph != null) {
-                return selectionSupplier.select(paragraph.getAnchor());
-            }
-
-        } else if (element instanceof Span) {
-
-            XTextContent[] text = ((Span)element).getComponent();
-            if (text != null) {
-                viewCursor.gotoRange(text[0].getAnchor().getEnd(), false);
-                viewCursor.gotoRange(text[1].getAnchor().getStart(), true);
-                return true;
-            }
-
-        } else if (element instanceof Table) {
-
-            XTextTable table = ((Table)element).getComponent();
-            if (table != null) {
-                String[] cellNames = table.getCellNames();
-                viewCursor.gotoRange((XTextRange)UnoRuntime.queryInterface(
-                                      XTextRange.class, table.getCellByName(cellNames[cellNames.length - 1])), false);
-                if (cellNames.length > 1) {
-                    XCellRange cellRange = (XCellRange)UnoRuntime.queryInterface(XCellRange.class, table);
-                    XTextTableCursor cursor = table.createCursorByCellName(cellNames[0]);
-                    cursor.gotoCellByName(cellNames[cellNames.length - 1], true);
-                    selectionSupplier.select(cellRange.getCellRangeByName(cursor.getRangeName()));
-                }
-                return true;
-            }
-
-        } else if (element instanceof DrawObject) {
-
-            XNamed object = ((DrawObject)element).getComponent();
-            if (object != null) {
-                return selectionSupplier.select(object);
+            if (element instanceof FocusableElement) {
+                return ((FocusableElement)element).focus();
             }
         }
 
         return false;
     }
 
-    private void removeSelection() throws IllegalArgumentException,
-                                          NoSuchElementException,
-                                          WrappedTargetException {
+    private void removeSelection() {
 
-        selectionSupplier.select(document.getFirstParagraph().getAnchor());
-        viewCursor.gotoStart(false);
-
+        try {
+            selectionSupplier.select(document.getFirstParagraph().getAnchor());
+            viewCursor.gotoStart(false);
+        } catch (IllegalArgumentException e) {
+        } catch (NoSuchElementException e) {
+        } catch (WrappedTargetException e) {
+        }
+        
     }
 
     // XActionListener

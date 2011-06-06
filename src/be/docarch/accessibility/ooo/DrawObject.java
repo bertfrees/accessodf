@@ -15,12 +15,12 @@ import com.sun.star.lang.IllegalArgumentException;
  *
  * @author Bert Frees
  */
-public class DrawObject extends Element {
+public class DrawObject extends FocusableElement {
 
     private boolean exists = false;
     private String name = "";
 
-    private XNamed component = null;
+    private XNamed xNamed = null;
 
     public DrawObject(XResource testsubject)
                throws RepositoryException,
@@ -43,7 +43,7 @@ public class DrawObject extends Element {
                 }
             }
             if (o != null) {
-                component = (XNamed)UnoRuntime.queryInterface(XNamed.class, o);
+                xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, o);
                 exists = true;
             }
         }
@@ -58,7 +58,7 @@ public class DrawObject extends Element {
     public XNamed getComponent() throws Exception {
 
         if (exists()) {
-            return component;
+            return xNamed;
         } else {
             throw new Exception("Object does not exist");
         }
@@ -87,5 +87,22 @@ public class DrawObject extends Element {
         final DrawObject that = (DrawObject)obj;
         return (!(this.exists()^that.exists()) &&
                   this.name.equals(that.name));
+    }
+
+    @Override
+    public boolean focus() {
+
+        if (!exists()) { return false; }
+
+        try {
+
+            if (xNamed != null) {
+                return selectionSupplier.select(xNamed);
+            }
+
+        } catch (IllegalArgumentException e) {
+        }
+
+        return false;
     }
 }

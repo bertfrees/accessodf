@@ -1,8 +1,7 @@
-package be.docarch.accessibility.ooo;
+package be.docarch.accessibility;
 
 import java.util.ArrayList;
 import java.util.TreeMap;
-
 
 /**
  *
@@ -73,9 +72,6 @@ public class FilterSorter implements java.util.Comparator<Issue> {
         for (int i=0; i<priority.size(); i++) {
             property = priority.get(i);
             switch (property) {
-                case NATURAL:
-                    compare = (new Integer(entry1.index).compareTo(new Integer(entry2.index)));
-                    break;
                 case NAME:
                     compare = (entry1.getName().compareTo(entry2.getName()));
                     break;
@@ -85,6 +81,7 @@ public class FilterSorter implements java.util.Comparator<Issue> {
                 case CATEGORY:
                     compare = (entry1.getCategory().compareTo(entry2.getCategory()));
                     break;
+                case NATURAL:
                 default:
                     compare = 0;
             }

@@ -1,5 +1,6 @@
 package be.docarch.accessibility.ooo;
 
+import be.docarch.accessibility.Repairer;
 import java.util.HashSet;
 import java.util.Collection;
 
@@ -19,20 +20,22 @@ import com.sun.star.lang.IllegalArgumentException;
 import com.sun.star.beans.UnknownPropertyException;
 
 import be.docarch.accessibility.Check;
+import be.docarch.accessibility.Issue;
+import be.docarch.accessibility.Element;
 
 /**
  *
  * @author Bert Frees
  */
-public class InternalRepairer implements Repairer {
+public class MainRepairer implements Repairer {
 
     private Collection<Check> supportedChecks;
     private Document document;
     private static XDispatchHelper dispatcher;
     private static XDispatchProvider dispatchProvider;
 
-    public InternalRepairer(Document document)
-                     throws com.sun.star.uno.Exception {
+    public MainRepairer(Document document)
+                 throws com.sun.star.uno.Exception {
 
         this.document = document;
         XComponentContext xContext = document.xContext;

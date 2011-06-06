@@ -19,13 +19,13 @@ import com.sun.star.lang.IllegalArgumentException;
  *
  * @author Bert Frees
  */
-public class Paragraph extends Element {
+public class Paragraph extends FocusableElement {
 
     protected boolean exists = false;
     private String sample = "";
     private String id = "";
 
-    private XTextContent component = null;
+    private XTextContent xTextContent = null;
 
     public Paragraph(XResource testsubject)
               throws RepositoryException,
@@ -41,12 +41,12 @@ public class Paragraph extends Element {
             XMetadatable element = xDMA.getElementByURI(paragraph);
             if (element != null) {
                 id = element.getMetadataReference().Second;
-                component = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, xDMA.getElementByURI(paragraph));
-                if (component != null) {
+                xTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, xDMA.getElementByURI(paragraph));
+                if (xTextContent != null) {
                     if (((XServiceInfo)UnoRuntime.queryInterface(
-                          XServiceInfo.class, component)).supportsService("com.sun.star.text.Paragraph")) {
+                          XServiceInfo.class, xTextContent)).supportsService("com.sun.star.text.Paragraph")) {
                         exists = true;
-                        sample = component.getAnchor().getString();
+                        sample = xTextContent.getAnchor().getString();
                         if (sample.length() > 30) {
                             sample = sample.substring(0, 30) + "\u2026";
                         }
@@ -65,7 +65,7 @@ public class Paragraph extends Element {
     public XTextContent getComponent() throws Exception {
 
         if (exists()) {
-            return component;
+            return xTextContent;
         } else {
             throw new Exception("Paragraph does not exist");
         }
@@ -94,5 +94,22 @@ public class Paragraph extends Element {
         final Paragraph that = (Paragraph)obj;
         return (!(this.exists()^that.exists()) &&
                   this.id.equals(that.id));
+    }
+
+    @Override
+    public boolean focus() {
+
+        if (!exists()) { return false; }
+
+        try {
+
+            if (xTextContent != null) {
+                return selectionSupplier.select(xTextContent.getAnchor());
+            }
+
+        } catch (IllegalArgumentException e) {
+        }
+        
+        return false;
     }
 }

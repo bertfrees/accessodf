@@ -58,14 +58,14 @@ import com.sun.star.rdf.RepositoryException;
 
 import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Check;
-import be.docarch.accessibility.Checker;
+import be.docarch.accessibility.RunnableChecker;
 import be.docarch.accessibility.Report;
 
 /**
  *
  * @author Bert Frees
  */
-public class InternalChecker implements Checker {
+public class MainChecker implements RunnableChecker {
 
     private Document document = null;
     private Settings settings = null;
@@ -84,7 +84,7 @@ public class InternalChecker implements Checker {
     private boolean modified = false;
     private String reportName = null;
 
-    public InternalChecker(Document document)
+    public MainChecker(Document document)
                     throws IllegalArgumentException {
 
         dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
@@ -132,7 +132,7 @@ public class InternalChecker implements Checker {
         }
     }
 
-    public boolean check(){
+    public boolean run(){
 
         lastChecked = new Date();
         reportName = getIdentifier() + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(lastChecked) + ".rdf";
