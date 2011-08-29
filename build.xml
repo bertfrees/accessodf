@@ -2,85 +2,96 @@
 <!-- You may freely edit this file. See commented blocks below for -->
 <!-- some examples of how to customize the build. -->
 <!-- (If you delete it and reopen the project it will be recreated.) -->
-<project name="AccessibilityCheckerAddOn" default="default" basedir=".">
+<project name="AccessibilityCheckerAddOn" default="jar" basedir=".">
     <description>Builds, tests, and runs the project extension project.</description>
     <import file="nbproject/build-uno-impl.xml"/>
-    <!--
 
-    There exist several targets which are by default empty and which can be 
-    used for execution of your tasks. These targets are usually executed 
-    before and after some main targets. They are: 
+	<!-- override targets -->
+	<target name="-pre-init" depends="-init-build,-copy-external-jars"/>
+	
+	
+    <target name="-init-build">
+	
+	    <property file="build.windows.properties"/>
+		
+	    <pathconvert property="libs.OpenOffice.org 3.3.classpath">
+            <path>
+                <pathelement location="${java.dir}${file.separator}juh.jar"/>
+                <pathelement location="${java.dir}${file.separator}jurt.jar"/>
+                <pathelement location="${java.dir}${file.separator}ridl.jar"/>
+                <pathelement location="${classes.dir}${file.separator}unoil.jar"/>
+            </path>
+        </pathconvert>
+	
+	    <property file="nbproject/project.properties"/>
+        <property file="nbproject/project-uno.properties"/>
 
-      -pre-init:                 called before initialization of project properties
-      -post-init:                called after initialization of project properties
-      -pre-compile:              called before javac compilation
-      -post-compile:             called after javac compilation
-      -pre-compile-single:       called before javac compilation of single file
-      -post-compile-single:      called after javac compilation of single file
-      -pre-compile-test:         called before javac compilation of JUnit tests
-      -post-compile-test:        called after javac compilation of JUnit tests
-      -pre-compile-test-single:  called before javac compilation of single JUnit test
-      -post-compile-test-single: called after javac compilation of single JUunit test
-      -pre-jar:                  called before JAR building
-      -post-jar:                 called after JAR building
-      -pre-uno-package:          called before OXT creation
-      -post-uno-package:         called after OXT creation
-      -post-clean:               called after cleaning build products
+        <property name="sdk.bin.dir"
+                  value="${sdk.dir}${file.separator}bin"/>
+        <property name="ure.bin.dir"
+                  value="${ure.dir}${file.separator}bin"/>
 
-    (Targets beginning with '-' are not intended to be called on their own.)
+        <pathconvert property="office.tool.path">
+            <path>
+                <pathelement location="${office.program.dir}"/>
+                <pathelement location="${sdk.bin.dir}"/>
+                <pathelement location="${basis.dir}${file.separator}program"/>
+                <pathelement location="${ure.bin.dir}"/>
+            </path>
+        </pathconvert>
+		
+		<pathconvert property="project.home">
+            <path path="."/>
+        </pathconvert>
+		
+		<pathconvert property="classpath.without.ooo">
+            <path path="${javac.classpath}"/>
+            <firstmatchmapper>
+                <globmapper from="*juh.jar"     to=""/>
+                <globmapper from="*jurt.jar"    to=""/>
+                <globmapper from="*ridl.jar"    to=""/>
+                <globmapper from="*unoil.jar"   to=""/>
+                <identitymapper/>
+            </firstmatchmapper>
+        </pathconvert>
 
-    Example of inserting an obfuscator after compilation could look like this:
-
-        <target name="-post-compile">
-            <obfuscate>
-                <fileset dir="${build.classes.dir}"/>
-            </obfuscate>
-        </target>
-
-    For list of available properties check the imported 
-    nbproject/build-impl.xml file. 
-
-
-    Another way to customize the build is by overriding existing main targets.
-    The targets of interest are: 
-
-      -init-macrodef-javac:     defines macro for javac compilation
-      -init-macrodef-junit:     defines macro for junit execution
-      -init-macrodef-debug:     defines macro for class debugging
-      -init-macrodef-java:      defines macro for class execution
-      -do-jar-with-manifest:    JAR building (if you are using a manifest)
-      -do-jar-without-manifest: JAR building (if you are not using a manifest)
-      run:                      execution of project 
-      -javadoc-build:           Javadoc generation
-      test-report:              JUnit report generation
-
-    An example of overriding the target for project execution could look like this:
-
-        <target name="run" depends="TypeBrowser2-impl.jar">
-            <exec dir="bin" executable="launcher.exe">
-                <arg file="${dist.jar}"/>
-            </exec>
-        </target>
-
-    Notice that the overridden target depends on the jar target and not only on 
-    the compile target as the regular run target does. Again, for a list of available 
-    properties which you can use, check the target you are overriding in the
-    nbproject/build-impl.xml file. 
-
-    -->
-
-    <!-- Maak aparte jar voor be.docarch.accessibility -->
-
-    <tstamp>
-        <format property="ISO-TODAY" pattern="yyyy-MM-dd"/>
-    </tstamp>
-
-    <patternset id="patternset">
-        <include name="be/docarch/accessibility/*.*"/>
-        <include name="META-INF/**/*.*"/>
-    </patternset>
-
+        <pathconvert property="external.jars" pathsep=" " dirsep="/">
+            <path path="${classpath.without.ooo}"/>
+            <chainedmapper>
+                <globmapper from="${project.home}${file.separator}*" to="*"/>
+                <flattenmapper/>
+                <globmapper from="*" to="${external.jar.dir}/*"/>
+            </chainedmapper>
+        </pathconvert>
+		
+		<available file="${dist.dir}${file.separator}${external.jar.dir}"
+                   property="external.jar.dir.exists"/>
+	
+	</target>
+	
+	
+	<!-- make external jars folder -->
+    <target name="-copy-external-jars" depends="-init-build" unless="external.jar.dir.exists">
+        <pathconvert property="classpath.without.ooo.space.sep" pathsep=" ">
+            <path path="${classpath.without.ooo}"/>
+            <map from="${project.home}${file.separator}" to=""/>
+        </pathconvert>
+        <mkdir dir="${dist.dir}${file.separator}${external.jar.dir}" />
+        <copy todir="${dist.dir}${file.separator}${external.jar.dir}" flatten="true">
+            <fileset dir="." includes="${classpath.without.ooo.space.sep}"/>
+        </copy>
+    </target>
+	
+	
+    <!-- Build be.docarch.accessibility -->
     <target name="-post-jar">
+        <tstamp>
+            <format property="ISO-TODAY" pattern="yyyy-MM-dd"/>
+        </tstamp>
+		<patternset id="patternset">
+			<include name="be/docarch/accessibility/*.*"/>
+		</patternset>
+
         <jar destfile="${dist.dir}/be.docarch.accessibility.jar">
             <fileset dir="${build.classes.dir}">
                 <patternset refid="patternset"/>

@@ -6,7 +6,8 @@
             <name>AccessibilityCheckerAddOn</name>
             <minimum-ant-version>1.6.5</minimum-ant-version>
             <source-roots>
-                <root id="src.src.dir"/>
+                <root id="src.core.dir"/>
+                <root id="src.addon.dir"/>
             </source-roots>
             <test-roots/>
         </data>
