@@ -60,8 +60,9 @@ import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.view.XSelectionChangeListener;
 import com.sun.star.lib.uno.helper.ComponentBase;
 
-import be.docarch.accessibility.ooo.*;
 import be.docarch.accessibility.*;
+import be.docarch.accessibility.ooo.*;
+import be.docarch.accessibility.ooo.rdf.*;
 
 import com.sun.star.rdf.RepositoryException;
 import com.sun.star.lang.DisposedException;
@@ -493,6 +494,9 @@ public class AccessibilityPanel extends ComponentBase
             XPackageInformationProvider xPkgInfo = PackageInformationProvider.get(xContext);
             imageDir = xPkgInfo.getPackageLocation("be.docarch.accessibility.ooo.accessibilitycheckeraddon") + "/images";
             document = new Document(xContext);
+
+            FocusableElement.initialise(document);
+            RDFClass.initialize(document);
 
             // Find & load plugin Checkers & Repairers
 
@@ -988,11 +992,9 @@ public class AccessibilityPanel extends ComponentBase
             return true;
         }
 
-        if (element.exists()) {
-            removeSelection();
-            if (element instanceof FocusableElement) {
-                return ((FocusableElement)element).focus();  // probleem indien DrawObject => Span !!!
-            }
+        removeSelection();
+        if (element instanceof FocusableElement) {
+            return ((FocusableElement)element).focus();
         }
 
         return false;

@@ -4,10 +4,8 @@ import java.util.Date;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 import java.util.logging.Level;
@@ -48,14 +46,9 @@ import com.sun.star.awt.FontSlant;
 import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.style.ParagraphAdjust;
 import com.sun.star.style.XStyle;
-import com.sun.star.rdf.XMetadatable;
 import com.sun.star.rdf.XURI;
 import com.sun.star.rdf.URI;
 import com.sun.star.rdf.XNamedGraph;
-import com.sun.star.rdf.XBlankNode;
-import com.sun.star.rdf.XResource;
-import com.sun.star.rdf.XNode;
-import com.sun.star.rdf.Literal;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawPageSupplier;
 import com.sun.star.form.XFormsSupplier2;
@@ -71,7 +64,10 @@ import com.sun.star.rdf.RepositoryException;
 
 import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Check;
+import be.docarch.accessibility.Issue;
 import be.docarch.accessibility.RunnableChecker;
+
+import be.docarch.accessibility.ooo.rdf.Assertions;
 
 /**
  *
@@ -86,53 +82,39 @@ public class MainChecker implements RunnableChecker {
     private final Collection<String> fakeFonts;
     private final XLanguageGuessing languageGuesser;
     private final XSelectionSupplier selectionSupplier;
-    private final Collection<Check> checks;
-    private final Map<String,XURI> checkURIs;
-    private final XURI assertor;
-    private final SimpleDateFormat dateFormat;
+    private final Map<String,Check> checks;
     
     private boolean daisyChecks = false;
-    private XNamedGraph graph = null;
     private Date lastChecked = null;
     private Collection<String> metadata = null;
     private int numberOfTitles = 0;
     private int numberOfHeadings = 0;
     private XTextViewCursor viewCursor = null;
     private XPageCursor pageCursor = null;
-    private boolean modified = false;
+  //private boolean modified = false;
     private String reportName = null;
     private Locale docLocale = null;
     private Map<XTextRange,XTextContent> textMetaMap;
-    private Set<String> detectedIssues;
-    
+    private Collection<Issue> detectedIssues;
 
     public MainChecker(Document document)
                 throws IllegalArgumentException,
                        com.sun.star.uno.Exception {
 
-        dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
-
         this.document = document;
         XComponentContext xContext = document.xContext;
         settings = new Settings(xContext);
 
-        assertor = URI.create(xContext, getIdentifier());
-
         textMetaMap = new HashMap<XTextRange,XTextContent>();
-        detectedIssues = new HashSet<String>();
-        checkURIs = new TreeMap<String,XURI>();
-        checks = new HashSet<Check>();
+        detectedIssues = new ArrayList<Issue>();
+        checks = new HashMap<String,Check>();
 
         for (GeneralCheck.ID id : GeneralCheck.ID.values()) {
-            checks.add(new GeneralCheck(id));
+            checks.put(id.name(), new GeneralCheck(id));
         }
 
         for (DaisyCheck.ID id : DaisyCheck.ID.values()) {
-            checks.add(new DaisyCheck(id));
-        }
-
-        for (Check check : checks) {
-            checkURIs.put(check.getIdentifier(), URI.createNS(xContext, Constants.A11Y_CHECKS, check.getIdentifier()));
+            checks.put(id.name(), new DaisyCheck(id));
         }
 
         fakeFonts = new HashSet<String>();
@@ -156,12 +138,21 @@ public class MainChecker implements RunnableChecker {
                              XSelectionSupplier.class, document.xModel.getCurrentController());
     }
 
-    public Collection<Check> getChecks() {
-        return checks;
-    }
-
     public String getIdentifier() {
         return "http://docarch.be/accessibility/ooo/InternalChecker";
+    }
+
+    public Collection<Check> list() {
+        return checks.values();
+    }
+
+    public Check get(String identifier) {
+        return checks.get(identifier);
+    }
+
+    @Override
+    public String toString() {
+        return getIdentifier();
     }
 
  /* public Date getLastCheckDate() {
@@ -189,6 +180,13 @@ public class MainChecker implements RunnableChecker {
 
             settings.loadData();
             daisyChecks = settings.daisyChecks();
+            detectedIssues.clear();
+            textMetaMap.clear();
+
+            // Traverse document
+            traverseDocument();
+
+            // Save detected issues in RDF
 
             XURI[] types = new XURI[]{ URI.create(document.xContext, getIdentifier()) };
             XURI graphURI = null;
@@ -198,37 +196,16 @@ public class MainChecker implements RunnableChecker {
                 graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + reportName);
             }
 
-            graph = document.xRepository.getGraph(graphURI);
-
-            // EARL assertor & testcases
-
-            addStatement(assertor, URIs.RDF_TYPE, URIs.EARL_ASSERTOR);
-            addStatement(assertor, URIs.RDF_TYPE, URIs.A11Y_CHECKER);
-            addStatement(assertor, URIs.DCT_DATE, Literal.create(document.xContext, dateFormat.format(lastChecked)));
-
-            detectedIssues.clear();
-            textMetaMap.clear();
-
-            // Traverse document
-            traverseDocument();
-
-            for (String id : detectedIssues) {
-                addStatement(checkURIs.get(id), URIs.RDF_TYPE, URIs.EARL_TESTCASE);
+            XNamedGraph graph = document.xRepository.getGraph(graphURI);
+            Assertions assertions = new Assertions(graph);
+            for (Issue i : detectedIssues) {
+                assertions.create(i).write();
             }
+            document.setModified();
 
             return true;
 
-        } catch (IllegalArgumentException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (RepositoryException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (UnknownPropertyException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (NoSuchElementException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (WrappedTargetException e) {
-            logger.log(Level.SEVERE, null, e);
-        } catch (com.sun.star.uno.Exception e) {
+        } catch (Exception e) {
             logger.log(Level.SEVERE, null, e);
         }
 
@@ -241,7 +218,8 @@ public class MainChecker implements RunnableChecker {
                                            NoSuchElementException,
                                            IndexOutOfBoundsException,
                                            UnknownPropertyException,
-                                           com.sun.star.uno.Exception {
+                                           com.sun.star.uno.Exception,
+                                           Exception {
 
         selectionSupplier.select(document.getFirstParagraph().getAnchor());
         XTextViewCursorSupplier xViewCursorSupplier = (XTextViewCursorSupplier)UnoRuntime.queryInterface(
@@ -309,13 +287,16 @@ public class MainChecker implements RunnableChecker {
         if (numberOfTitles == 0)   { metadata.add(GeneralCheck.ID.A_NoTitle.name()); }
         if (numberOfHeadings == 0) { metadata.add(GeneralCheck.ID.A_NoHeadings.name()); }
         if (metadata.size() > 0) {
-            addMetadataToDocument(metadata);
+            for (String id : metadata) {
+                detectedIssues.add(new Issue(null, get(id), this));
+            }
+            metadata.clear();
         }
 
-        if (modified) {
-            document.setModified();
-            modified = false;
-        }
+//        if (modified) {
+//            document.setModified();
+//            modified = false;
+//        }
     }
 
  /* private void traverseFormComponents(XNameAccess formComponentContainer) throws Exception {
@@ -344,7 +325,8 @@ public class MainChecker implements RunnableChecker {
                                      NoSuchElementException,
                                      IndexOutOfBoundsException,
                                      RepositoryException,
-                                     com.sun.star.uno.Exception {
+                                     com.sun.star.uno.Exception,
+                                     Exception {
 
         Object element = null;
         XServiceInfo serviceInfo = null;
@@ -405,9 +387,9 @@ public class MainChecker implements RunnableChecker {
               //numberingStyleName = AnyConverter.toString(properties.getPropertyValue("NumberingStyleName"));
 
                 if (caption != null && captionAfterTable && bigTable) {
-                    Collection<String> meta = new ArrayList<String>();
-                    meta.add(GeneralCheck.ID.A_CaptionBelowBigTable.name());
-                    addMetadataToParagraph(caption, meta);
+                    detectedIssues.add(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent),
+                                                 get(GeneralCheck.ID.A_CaptionBelowBigTable.name()),
+                                                 this));
                 }
 
                 caption = null;
@@ -481,10 +463,10 @@ public class MainChecker implements RunnableChecker {
                     }
 
                     if (caption != null && afterTable && bigTable) {
-                        if (keepWithTableBefore || !keepWithNext) {
-                            Collection<String> meta = new ArrayList<String>();
-                            meta.add(GeneralCheck.ID.A_CaptionBelowBigTable.name());
-                            addMetadataToParagraph(caption, meta);
+                        if (keepWithTableBefore || !keepWithNext) {                            
+                            detectedIssues.add(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent),
+                                                         get(GeneralCheck.ID.A_CaptionBelowBigTable.name()),
+                                                         this));
                             caption = null;
                         } else {
                             captionAfterTable = true;
@@ -526,7 +508,11 @@ public class MainChecker implements RunnableChecker {
                 }
 
                 if (metadata.size() > 0) {
-                    addMetadataToParagraph(paragraph, metadata);
+                    be.docarch.accessibility.ooo.Paragraph p = new be.docarch.accessibility.ooo.Paragraph(textContent);
+                    for (String id : metadata) {
+                        detectedIssues.add(new Issue(p, get(id), this));
+                    }
+                    metadata.clear();
                 }
 
                 afterTable = false;
@@ -543,9 +529,9 @@ public class MainChecker implements RunnableChecker {
         }
 
         if (caption != null && captionAfterTable) {
-            Collection<String> meta = new ArrayList<String>();
-            meta.add(GeneralCheck.ID.A_CaptionBelowBigTable.name());
-            addMetadataToParagraph(caption, meta);
+            detectedIssues.add(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent),
+                                         get(GeneralCheck.ID.A_CaptionBelowBigTable.name()),
+                                         this));
         }
 
         XTextCursor cursor = textRange.getText().createTextCursorByRange(textRange);
@@ -572,7 +558,8 @@ public class MainChecker implements RunnableChecker {
                                       IllegalArgumentException,
                                       RepositoryException,
                                       NoSuchElementException,
-                                      com.sun.star.uno.Exception {
+                                      com.sun.star.uno.Exception,
+                                      Exception {
 
         float charHeight = 0;
         float charWeight = 0;
@@ -839,7 +826,8 @@ public class MainChecker implements RunnableChecker {
                                   IndexOutOfBoundsException,
                                   NoSuchElementException,
                                   WrappedTargetException,
-                                  com.sun.star.uno.Exception {
+                                  com.sun.star.uno.Exception,
+                                  Exception  {
 
         XPropertySet properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, table);
         XPropertySet rowProperties = null;
@@ -895,7 +883,11 @@ public class MainChecker implements RunnableChecker {
         }
 
         if (metadata.size() > 0) {
-            addMetadataToTable(table, metadata);
+            be.docarch.accessibility.ooo.Table t = new be.docarch.accessibility.ooo.Table(table);
+            for (String id : metadata) {
+                detectedIssues.add(new Issue(t, get(id), this));
+            }
+            metadata.clear();
         }
 
         return pageRange[1] - pageRange[0] + 1;
@@ -908,7 +900,8 @@ public class MainChecker implements RunnableChecker {
                                     NoSuchElementException,
                                     RepositoryException,
                                     IllegalArgumentException,
-                                    com.sun.star.uno.Exception {
+                                    com.sun.star.uno.Exception,
+                                    Exception {
 
         XTextFrame textFrame = null;
 
@@ -936,7 +929,10 @@ public class MainChecker implements RunnableChecker {
                 metadata.add(DaisyCheck.ID.A_RearMatterStartSectionNested.name());
             }
             if (metadata.size() > 0) {
-                addMetadataToDocument(metadata);
+                for (String id : metadata) {
+                    detectedIssues.add(new Issue(null, get(id), this));
+                }
+                metadata.clear();
             }
         }
         for (XTextSection childSection : section.getChildSections()) {
@@ -950,7 +946,8 @@ public class MainChecker implements RunnableChecker {
                                         WrappedTargetException,
                                         RepositoryException,
                                         IllegalArgumentException,
-                                        NoSuchElementException {
+                                        NoSuchElementException,
+                                        Exception {
 
         Object graphicObject = null;
         XPropertySet properties = null;
@@ -1004,7 +1001,11 @@ public class MainChecker implements RunnableChecker {
             }
 
             if (graphicMetadata.size() > 0) {
-                addMetadataToGraphic(graphicObject, graphicMetadata);
+                XNamed namedGraphic = (XNamed)UnoRuntime.queryInterface(XNamed.class, graphicObject);
+                DrawObject o = new DrawObject(namedGraphic);
+                for (String id : graphicMetadata) {
+                    detectedIssues.add(new Issue(o, get(id), this));
+                }
             }
         }
     }
@@ -1016,7 +1017,8 @@ public class MainChecker implements RunnableChecker {
                                          RepositoryException,
                                          IllegalArgumentException,
                                          NoSuchElementException,
-                                         com.sun.star.uno.Exception {
+                                         com.sun.star.uno.Exception,
+                                         Exception {
 
         Object embeddedObject = null;
         XPropertySet properties = null;
@@ -1030,53 +1032,16 @@ public class MainChecker implements RunnableChecker {
             title = AnyConverter.toString(properties.getPropertyValue("Title"));
             description = AnyConverter.toString(properties.getPropertyValue("Description"));
 
-            if (title.length() == 0 || description.length() == 0) {
+            if (title.length() == 0) {
+                XNamed namedObject = (XNamed)UnoRuntime.queryInterface(XNamed.class, embeddedObject);
+                DrawObject o = new DrawObject(namedObject);
                 if (AnyConverter.toString(properties.getPropertyValue("CLSID")).equals("078B7ABA-54FC-457F-8551-6147e776a997")) {
-                    addMetadataToObject(embeddedObject, GeneralCheck.ID.A_FormulaWithoutAlt.name());
+                    detectedIssues.add(new Issue(o, get(GeneralCheck.ID.A_FormulaWithoutAlt.name()), this));
                 } else {
-                    addMetadataToObject(embeddedObject, GeneralCheck.ID.A_ObjectWithoutAlt.name());
+                    detectedIssues.add(new Issue(o, get(GeneralCheck.ID.A_ObjectWithoutAlt.name()), this));
                 }
             }
         }
-    }
-
-    private void addMetadataToDocument(Collection<String> data)
-                                throws IllegalArgumentException,
-                                       NoSuchElementException,
-                                       RepositoryException {
-
-        XBlankNode subject = document.xRepository.createBlankNode();
-
-        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-        addStatement(subject, URIs.RDF_TYPE, URIs.A11Y_DOCUMENT);
-
-        for (String id : data) {
-            addAssertion(subject, id);
-        }
-
-        data.clear();
-    }
-
-    private void addMetadataToParagraph(Paragraph paragraph,
-                                        Collection<String> data)
-                                 throws IllegalArgumentException,
-                                        RepositoryException,
-                                        NoSuchElementException {
-
-        XMetadatable xMetadatable = paragraph.getMetadatable();
-        xMetadatable.ensureMetadataReference();
-
-        XBlankNode subject = document.xRepository.createBlankNode();
-
-        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-        addStatement(subject, URIs.RDF_TYPE, URIs.A11Y_PARAGRAPH);
-        addStatement(subject, URIs.A11Y_START, xMetadatable);
-
-        for (String id : data) {
-            addAssertion(subject, id);
-        }
-
-        data.clear();
     }
 
     private void addMetadataToSpan(Span span,
@@ -1084,137 +1049,28 @@ public class MainChecker implements RunnableChecker {
                             throws IllegalArgumentException,
                                    NoSuchElementException,
                                    RepositoryException,
-                                   com.sun.star.uno.Exception {
+                                   com.sun.star.uno.Exception,
+                                   Exception {
 
         XTextContent start = getTextMeta(span.getStartPoint());
         XTextContent end = getTextMeta(span.getEndPoint());
-        XMetadatable startMetadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, start);
-        XMetadatable endMetadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, end);
-        startMetadatable.ensureMetadataReference();
-        endMetadatable.ensureMetadataReference();
-
-        String sample = span.getText();
-        if (sample.length() > 30) {
-            sample = sample.substring(0, 30) + "\u2026";
-        }
-
-        XBlankNode subject = document.xRepository.createBlankNode();
-
-        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-        addStatement(subject, URIs.RDF_TYPE, URIs.A11Y_SPAN);
-        addStatement(subject, URIs.A11Y_START, startMetadatable);
-        addStatement(subject, URIs.A11Y_END, endMetadatable);
-        addStatement(subject, URIs.DCT_DESCRIPTION, Literal.create(document.xContext, sample));
-
-        addAssertion(subject, id);
+        detectedIssues.add(new Issue(new be.docarch.accessibility.ooo.Span(start, end), get(id), this));
     }
 
-    private void addMetadataToTable(XTextTable table,
-                                    Collection<String> data)
-                             throws IllegalArgumentException,
-                                    NoSuchElementException,
-                                    RepositoryException {
 
-        XNamed namedTable = (XNamed)UnoRuntime.queryInterface(XNamed.class, table);
 
-        XBlankNode subject = document.xRepository.createBlankNode();
 
-        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-        addStatement(subject, URIs.RDF_TYPE, URIs.A11Y_TABLE);
-        addStatement(subject, URIs.DCT_TITLE, Literal.create(document.xContext, namedTable.getName()));
 
-        for (String id : data) {
-            addAssertion(subject, id);
-        }
+    // TODO: in aparte klassen zetten
 
-        data.clear();
-    }
+    private class Paragraph { // TODO: samenvoegen met be.docarch.accessibility.ooo.Paragraph
 
-    private void addMetadataToGraphic(Object graphic,
-                                      Collection<String> data)
-                               throws IllegalArgumentException,
-                                      NoSuchElementException,
-                                      RepositoryException {
-
-        XNamed namedGraphic = (XNamed)UnoRuntime.queryInterface(XNamed.class, graphic);
-
-        XBlankNode subject = document.xRepository.createBlankNode();
-
-        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-        addStatement(subject, URIs.RDF_TYPE, URIs.A11Y_OBJECT);
-        addStatement(subject, URIs.DCT_TITLE, Literal.create(document.xContext, namedGraphic.getName()));
-
-        for (String id : data) {
-            addAssertion(subject, id);
-        }
-
-        data.clear();
-    }
-
-    private void addMetadataToObject(Object object,
-                                     String checkID)
-                              throws IllegalArgumentException,
-                                     NoSuchElementException,
-                                     RepositoryException {
-
-        XNamed namedObject = (XNamed)UnoRuntime.queryInterface(XNamed.class, object);
-
-        XBlankNode subject = document.xRepository.createBlankNode();
-
-        addStatement(subject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-        addStatement(subject, URIs.RDF_TYPE, URIs.A11Y_OBJECT);
-        addStatement(subject, URIs.DCT_TITLE, Literal.create(document.xContext, namedObject.getName()));
-
-        addAssertion(subject, checkID);
-    }
-
-    private void addAssertion(XResource subject,
-                              String checkID)
-                       throws IllegalArgumentException,
-                              RepositoryException,
-                              NoSuchElementException {
-
-        XBlankNode assertion = document.xRepository.createBlankNode();
-        XBlankNode testresult = document.xRepository.createBlankNode();
-        XURI check = checkURIs.get(checkID);
-
-        addStatement(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT);
-        addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_FAILED);
-        addStatement(testresult, URIs.DCT_DATE, Literal.create(document.xContext, dateFormat.format(lastChecked)));
-        addStatement(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
-        addStatement(assertion, URIs.EARL_RESULT, testresult);
-        addStatement(assertion, URIs.EARL_TEST, check);
-        addStatement(assertion, URIs.EARL_SUBJECT, subject);
-        addStatement(assertion, URIs.EARL_ASSERTEDBY, assertor);
-
-        detectedIssues.add(checkID);
-
-        modified = true;
-
-    }
-
-    private void addStatement(XResource subject,
-                              XURI predicate,
-                              XNode object)
-                       throws IllegalArgumentException,
-                              NoSuchElementException,
-                              RepositoryException {
-
-        if (graph != null) {
-            graph.addStatement(subject, predicate, object);
-        }
-    }
-
-    private class Paragraph {
-
-        private final XTextContent textContent;
         private final XTextRange startPoint;
         private final XTextRange endPoint;
         private final List<TextPortion> textPortions;
-        private XMetadatable metadatable;
 
         public Paragraph(XTextContent textContent) {
-            this.textContent = textContent;
+
             textPortions = new ArrayList<TextPortion>();
             XEnumerationAccess enumerationAccess = (XEnumerationAccess)UnoRuntime.queryInterface(
                                                     XEnumerationAccess.class, textContent);
@@ -1260,13 +1116,6 @@ public class MainChecker implements RunnableChecker {
 
         public XTextRange getStartPoint() { return startPoint; }
         public XTextRange getEndPoint() { return endPoint; }
-
-        public XMetadatable getMetadatable() {
-            if (metadatable == null) {
-                metadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, textContent);
-            }
-            return metadatable;
-        }
     }
 
     private class TextPortion {
@@ -1284,7 +1133,7 @@ public class MainChecker implements RunnableChecker {
         }
     }
 
-    private class Span {
+    private class Span { // TODO: samenvoegen met be.docarch.accessibility.ooo.Span ?
 
         private String text;
         private XTextRange startPoint;
@@ -1351,6 +1200,13 @@ public class MainChecker implements RunnableChecker {
 
         public String url() { return url; }
     }
+
+
+
+
+
+
+
 
     public void setTextMeta(XTextRange range, XTextContent textMeta) {
         textMetaMap.put(range, textMeta);

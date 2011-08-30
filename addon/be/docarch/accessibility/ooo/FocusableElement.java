@@ -4,7 +4,6 @@ import java.util.logging.Logger;
 
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.uno.UnoRuntime;
-
 import com.sun.star.container.XNameAccess;
 import com.sun.star.text.XTextTablesSupplier;
 import com.sun.star.text.XTextGraphicObjectsSupplier;
@@ -37,8 +36,8 @@ public abstract class FocusableElement extends Element {
     protected static XTextViewCursor viewCursor = null;
     protected static XSelectionSupplier selectionSupplier = null;
 
-    static void initialise(Document document)
-                    throws IllegalArgumentException {
+    public static void initialise(Document document)
+                           throws IllegalArgumentException {
 
         FocusableElement.xContext = document.xContext;
         FocusableElement.xDMA = document.xDMA;

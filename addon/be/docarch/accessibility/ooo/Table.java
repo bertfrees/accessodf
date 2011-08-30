@@ -1,17 +1,12 @@
 package be.docarch.accessibility.ooo;
 
 import com.sun.star.uno.UnoRuntime;
-import com.sun.star.container.XEnumeration;
-import com.sun.star.rdf.XResource;
-import com.sun.star.rdf.Statement;
+import com.sun.star.container.XNamed;
 import com.sun.star.text.XTextTableCursor;
 import com.sun.star.text.XTextRange;
 import com.sun.star.text.XTextTable;
 import com.sun.star.table.XCellRange;
 
-import com.sun.star.container.NoSuchElementException;
-import com.sun.star.rdf.RepositoryException;
-import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.IllegalArgumentException;
 
 /**
@@ -20,55 +15,49 @@ import com.sun.star.lang.IllegalArgumentException;
  */
 public class Table extends FocusableElement {
 
-    private boolean exists = false;
-    private String name = "";
+    private final XTextTable xTextTable;
+    private final XNamed xNamed;
 
-    private XTextTable xTextTable = null;
+    public Table(String name)
+          throws Exception {
 
-    public Table(XResource testsubject)
-          throws RepositoryException,
-                 NoSuchElementException,
-                 IllegalArgumentException,
-                 WrappedTargetException {
-
-        logger.entering("Table", "<init>");
-
-        XEnumeration names = xRepository.getStatements(testsubject, URIs.DCT_TITLE, null);
-        if (names.hasMoreElements()) {
-            name = ((Statement)names.nextElement()).Object.getStringValue();
-            try {
-                Object o = tables.getByName(name);
-                xTextTable = (XTextTable)UnoRuntime.queryInterface(XTextTable.class, o);
-                exists = true;
-            } catch (NoSuchElementException e) {
-            }
+        if (name != null) {
+            Object o = tables.getByName(name);
+            xTextTable = (XTextTable)UnoRuntime.queryInterface(XTextTable.class, o);
+            xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, xTextTable);
+            return;
         }
-
-        logger.exiting("Table", "<init>");
+        throw new Exception();
     }
 
-    public boolean exists() {
-        return exists;
+    public Table(XTextTable xTextTable)
+          throws Exception {
+
+        if (xTextTable != null) {
+            this.xTextTable = xTextTable;
+            xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, xTextTable);
+            return;
+        }
+        throw new Exception();
     }
 
-    public XTextTable getXTextTable() throws Exception {
+    public XTextTable getXTextTable() {
+        return xTextTable;
+    }
 
-        if (exists()) {
-            return xTextTable;
-        } else {
-            throw new Exception("Table does not exist");
-        }
+    public XNamed getXNamed() {
+        return xNamed;
     }
 
     public String toString() {
-        return name;
+        return xNamed.getName();
     }
 
     public int hashCode() {
 
         final int PRIME = 31;
         int hash = 1;
-        hash = hash * PRIME + name.hashCode();
+        hash = hash * PRIME + toString().hashCode();
         return hash;
     }
 
@@ -78,17 +67,13 @@ public class Table extends FocusableElement {
         if (obj == null) { return false; }
         if (getClass() != obj.getClass()) { return false; }
         final Table that = (Table)obj;
-        return (!(this.exists()^that.exists()) &&
-                  this.name.equals(that.name));
+        return (this.toString().equals(that.toString()));
     }
 
     @Override
     public boolean focus() {
 
-        if (!exists()) { return false; }
-
         try {
-
             if (xTextTable != null) {
                 String[] cellNames = xTextTable.getCellNames();
                 viewCursor.gotoRange((XTextRange)UnoRuntime.queryInterface(
@@ -101,7 +86,6 @@ public class Table extends FocusableElement {
                 }
                 return true;
             }
-
         } catch (IllegalArgumentException e) {
         }
 

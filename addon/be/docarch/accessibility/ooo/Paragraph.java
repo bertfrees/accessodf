@@ -2,17 +2,9 @@ package be.docarch.accessibility.ooo;
 
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.lang.XServiceInfo;
-import com.sun.star.container.XEnumeration;
 import com.sun.star.text.XTextContent;
-import com.sun.star.rdf.XResource;
-import com.sun.star.rdf.XURI;
-import com.sun.star.rdf.URI;
-import com.sun.star.rdf.Statement;
 import com.sun.star.rdf.XMetadatable;
 
-import com.sun.star.container.NoSuchElementException;
-import com.sun.star.rdf.RepositoryException;
-import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.IllegalArgumentException;
 
 /**
@@ -21,54 +13,60 @@ import com.sun.star.lang.IllegalArgumentException;
  */
 public class Paragraph extends FocusableElement {
 
-    protected boolean exists = false;
+    private final XTextContent xTextContent;
+    private final XMetadatable metadatable;
     private String sample = "";
     private String id = "";
 
-    private XTextContent xTextContent = null;
-
-    public Paragraph(XResource testsubject)
-              throws RepositoryException,
-                     NoSuchElementException,
-                     IllegalArgumentException,
-                     WrappedTargetException {
-
-        logger.entering("Paragraph", "<init>");
-
-        XEnumeration paragraphs = xRepository.getStatements(testsubject, URIs.A11Y_START, null);
-        if (paragraphs.hasMoreElements()) {
-            XURI paragraph = URI.create(xContext, ((Statement)paragraphs.nextElement()).Object.getStringValue());
-            XMetadatable element = xDMA.getElementByURI(paragraph);
-            if (element != null) {
-                id = element.getMetadataReference().Second;
-                xTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, xDMA.getElementByURI(paragraph));
-                if (xTextContent != null) {
-                    if (((XServiceInfo)UnoRuntime.queryInterface(
-                          XServiceInfo.class, xTextContent)).supportsService("com.sun.star.text.Paragraph")) {
-                        exists = true;
-                        sample = xTextContent.getAnchor().getString();
-                        if (sample.length() > 30) {
-                            sample = sample.substring(0, 30) + "\u2026";
-                        }
-                    }
-                }
+    public Paragraph(XTextContent textContent) throws Exception {
+        
+        if (textContent != null) {
+            xTextContent = textContent;
+            metadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, xTextContent);
+            if (metadatable != null) {
+                metadatable.ensureMetadataReference();
+                init();
+                return;
             }
         }
-
-        logger.exiting("Paragraph", "<init>");
+        throw new Exception();
     }
 
-    public boolean exists() {
-        return exists;
-    }
+    public Paragraph(XMetadatable metadatable) throws Exception {
 
-    public XTextContent getXTextContent() throws Exception {
-
-        if (exists()) {
-            return xTextContent;
-        } else {
-            throw new Exception("Paragraph does not exist");
+        if (metadatable != null) {
+            this.metadatable = metadatable;
+            metadatable.ensureMetadataReference();
+            xTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, metadatable);
+            if (xTextContent != null) {
+                init();
+                return;
+            }
         }
+        throw new Exception();
+    }
+
+    private void init() throws Exception {
+
+        id = metadatable.getMetadataReference().Second;
+        if (((XServiceInfo)UnoRuntime.queryInterface(
+              XServiceInfo.class, xTextContent)).supportsService("com.sun.star.text.Paragraph")) {
+            sample = xTextContent.getAnchor().getString();
+            if (sample.length() > 30) {
+                sample = sample.substring(0, 30) + "\u2026";
+            }
+            return;
+        }
+
+        throw new Exception();
+    }
+
+    public XTextContent getXTextContent() {
+        return xTextContent;
+    }
+
+    public XMetadatable getXMetadatable() {
+        return metadatable;
     }
 
     public String toString() {
@@ -89,21 +87,16 @@ public class Paragraph extends FocusableElement {
         if (obj == null) { return false; }
         if (getClass() != obj.getClass()) { return false; }
         final Paragraph that = (Paragraph)obj;
-        return (!(this.exists()^that.exists()) &&
-                  this.id.equals(that.id));
+        return (this.id.equals(that.id));
     }
 
     @Override
     public boolean focus() {
 
-        if (!exists()) { return false; }
-
         try {
-
             if (xTextContent != null) {
                 return selectionSupplier.select(xTextContent.getAnchor());
             }
-
         } catch (IllegalArgumentException e) {
         }
         

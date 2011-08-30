@@ -8,11 +8,11 @@ import java.io.File;
  */
 public interface RemoteRunnableChecker extends RunnableChecker {
 
-    public abstract void setOdtFile(File odtFile);
+    public void setOdtFile(File odtFile);
 
     /**
      * @return Returns the accessibility report
      */
-    public abstract Report getAccessibilityReport();
+    public Report getAccessibilityReport();
 
 }

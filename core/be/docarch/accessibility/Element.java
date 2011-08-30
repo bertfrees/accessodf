@@ -6,8 +6,6 @@ package be.docarch.accessibility;
  */
 public abstract class Element {
 
-    public abstract boolean exists();
-
     @Override
     public abstract int hashCode();
 

@@ -1,39 +1,101 @@
 package be.docarch.accessibility;
 
 import java.util.Date;
+import java.util.Collection;
+import java.util.ArrayList;
 
 /**
  *
  * @author Bert Frees
  */
-public abstract class Issue {
+public class Issue {
 
-    public abstract Element getElement();
+    private Collection<IssueListener> listeners;
 
-    public abstract boolean ignored();
+    private final Element element;
+    private final Check check;
+    private final Checker checker;
+    private final Date checkDate;
 
-    public abstract boolean repaired();
+    private boolean ignored = false;
+    private boolean repaired = false;
 
-    public abstract Date getCheckDate();
+    public Issue(Element element,
+                 Check check,
+                 Checker checker) {
 
-    public abstract Check getCheck();
+        this(element, check, checker,new Date());
+    }
 
-    public abstract Checker getChecker();
+    public Issue(Element element,
+                 Check check,
+                 Checker checker,
+                 Date checkDate) {
 
-    public abstract void ignored(boolean ignored);
+        this.element = element;
+        this.check = check;
+        this.checker = checker;
+        this.checkDate = checkDate;
+    }
 
-    public abstract void repaired(boolean repaired);
+    public Element getElement() {
+        return element;
+    }
 
-    public abstract void remove();
+    public boolean ignored() {
+        return ignored;
+    }
+
+    public boolean repaired() {
+        return repaired;
+    }
+
+    public Date getCheckDate() {
+        return checkDate;
+    }
+
+    public Check getCheck() {
+        return check;
+    }
+
+    public Checker getChecker() {
+        return checker;
+    }
+
+    public void ignored(boolean ignored) {
+        this.ignored = ignored;
+        fireEvent(IssueEvent.Type.IGNORE);
+    }
+
+    public void repaired(boolean repaired) {
+        this.repaired = repaired;
+        fireEvent(IssueEvent.Type.REPAIR);
+    }
+
+    public void remove() {
+        fireEvent(IssueEvent.Type.REMOVE);
+    }
 
     public String getName() {
 
-        Element element = getElement();
         if (element == null) {
             return "";
         } else {
             return element.toString();
         }
+    }
+
+    private void fireEvent(IssueEvent.Type type) {
+        if (listeners == null) { return; }
+        IssueEvent event = new IssueEvent(this, type);
+        for (IssueListener listener : listeners) {
+            listener.issueUpdated(event);
+        }
+    }
+
+    public void addListener(IssueListener listener) {
+        if (listeners == null) { listeners = new ArrayList<IssueListener>(); }
+        listeners.add(listener);
     }
 
     @Override
@@ -42,7 +104,6 @@ public abstract class Issue {
         final int PRIME = 31;
         int hash = 1;
         hash = hash * PRIME + getCheck().hashCode();
-        Element element = getElement();
         if (element != null) {
             hash = hash * PRIME + element.hashCode();
         }
@@ -52,17 +113,13 @@ public abstract class Issue {
     @Override
     public boolean equals(Object obj) {
 
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (!(obj instanceof Issue))
-            return false;
+        if (this == obj) { return true; }
+        if (obj == null) { return false; }
+        if (!(obj instanceof Issue)){ return false; }
         final Issue that = (Issue)obj;
         if (!this.getCheck().equals(that.getCheck())) {
             return false;
         }
-        Element element = getElement();
         if (element == null) {
             return (that.getElement() == null);
         } else {

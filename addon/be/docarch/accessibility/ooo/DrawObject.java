@@ -2,13 +2,8 @@ package be.docarch.accessibility.ooo;
 
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.container.XNamed;
-import com.sun.star.container.XEnumeration;
-import com.sun.star.rdf.XResource;
-import com.sun.star.rdf.Statement;
 
 import com.sun.star.container.NoSuchElementException;
-import com.sun.star.rdf.RepositoryException;
-import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.IllegalArgumentException;
 
 /**
@@ -17,22 +12,12 @@ import com.sun.star.lang.IllegalArgumentException;
  */
 public class DrawObject extends FocusableElement {
 
-    private boolean exists = false;
-    private String name = "";
-
     private XNamed xNamed = null;
 
-    public DrawObject(XResource testsubject)
-               throws RepositoryException,
-                      NoSuchElementException,
-                      IllegalArgumentException,
-                      WrappedTargetException {
+    public DrawObject(String name)
+               throws Exception {
 
-        logger.entering("DrawObject", "<init>");
-
-        XEnumeration names = xRepository.getStatements(testsubject, URIs.DCT_TITLE, null);
-        if (names.hasMoreElements()) {
-            name = ((Statement)names.nextElement()).Object.getStringValue();
+        if (name != null) {
             Object o = null;
             try {
                 o = embeddedObjects.getByName(name);
@@ -44,35 +29,35 @@ public class DrawObject extends FocusableElement {
             }
             if (o != null) {
                 xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, o);
-                exists = true;
+                return;
             }
         }
-
-        logger.exiting("DrawObject", "<init>");
+        throw new Exception();
     }
 
-    public boolean exists() {
-        return exists;
-    }
+    public DrawObject(XNamed xNamed)
+               throws Exception {
 
-    public XNamed getXNamed() throws Exception {
-
-        if (exists()) {
-            return xNamed;
-        } else {
-            throw new Exception("Object does not exist");
+        if (xNamed != null) {
+            this.xNamed = xNamed;
+            return;
         }
+        throw new Exception();
+    }
+
+    public XNamed getXNamed() {
+        return xNamed;
     }
 
     public String toString() {
-        return name;
+        return xNamed.getName();
     }
 
     public int hashCode() {
 
         final int PRIME = 31;
         int hash = 1;
-        hash = hash * PRIME + name.hashCode();
+        hash = hash * PRIME + toString().hashCode();
         return hash;
     }
 
@@ -82,14 +67,12 @@ public class DrawObject extends FocusableElement {
         if (obj == null) { return false; }
         if (getClass() != obj.getClass()) { return false; }
         final DrawObject that = (DrawObject)obj;
-        return (!(this.exists()^that.exists()) &&
-                  this.name.equals(that.name));
+        return (this.toString().equals(that.toString()));
     }
 
     @Override
     public boolean focus() {
 
-        if (!exists()) { return false; }
         try {
             if (xNamed != null) {
                 return selectionSupplier.select(xNamed);

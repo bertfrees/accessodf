@@ -22,6 +22,11 @@ public abstract class Check {
     public abstract String getSuggestion(Locale locale);
 
     @Override
+    public String toString() {
+        return getIdentifier();
+    }
+
+    @Override
     public int hashCode() {
         return getIdentifier().hashCode();
    }

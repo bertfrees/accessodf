@@ -43,6 +43,7 @@ import be.docarch.accessibility.Issue;
 import be.docarch.accessibility.FilterSorter;
 import be.docarch.accessibility.Repairer;
 import be.docarch.accessibility.Repairer.RepairMode;
+import be.docarch.accessibility.ooo.rdf.*;
 
 /**
  *
@@ -56,11 +57,11 @@ public class IssueManager {
     
     public static enum Status { ALERT, ERROR, REPAIRED, IGNORED };
 
-    private Document document = null;
-    private Settings settings = null;
-    private Provider<Checker> checkers = null;
-    
-    private List<Issue> allIssues = null;
+    private final Document document;
+    private final Settings settings;
+    private final Provider<Checker> checkers;
+
+    private final List<Issue> allIssues;
     private FilterSorter filterSorter = null;
     private Issue selectedIssue = null;
     private Check selectedCheck = null;
@@ -82,19 +83,18 @@ public class IssueManager {
 
         this.document = document;
         this.checkers = checkers;
+        Provider<Check> checks = new CheckProvider(checkers);
 
         settings = new Settings(document.xContext);
         check2repairerMap = new HashMap<Check,Repairer>();
 
-        for (Check check : new CheckProvider(checkers).list()) {
+        for (Check check : checks.list()) {
             for (Repairer repairer : repairers.list()) {
                 if (repairer.supports(check)) {
                     check2repairerMap.put(check, repairer);
                 }
             }
         }
-
-        RDFIssue.initialise(document, checkers);
 
         check2IssuesMap = new HashMap<Check,List<Issue>>();
 
@@ -206,13 +206,13 @@ public class IssueManager {
             checkerDates.put(checker.getIdentifier(), longAgo);
         }
 
-        for (XNamedGraph accessibilityDataGraph : accessibilityDataGraphs) {
-            XEnumeration assertors = accessibilityDataGraph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTOR);
-            if (assertors.hasMoreElements()) {
-                XURI assertor = URI.create(document.xContext, ((Statement)assertors.nextElement()).Subject.getStringValue());
+        for (XNamedGraph graph : accessibilityDataGraphs) {
+            XEnumeration assertorEnum = graph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTOR);
+            if (assertorEnum.hasMoreElements()) {
+                XURI assertor = URI.create(document.xContext, ((Statement)assertorEnum.nextElement()).Subject.getStringValue());
                 Checker checker = checkers.get(assertor.getStringValue());
                 if (checker != null) {
-                    XEnumeration timestamps = accessibilityDataGraph.getStatements(assertor, URIs.DCT_DATE, null);
+                    XEnumeration timestamps = graph.getStatements(assertor, URIs.DCT_DATE, null);
                     if (timestamps.hasMoreElements()) {
                         try {
                             Date date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").parse(((Statement)timestamps.nextElement()).Object.getStringValue());
@@ -230,23 +230,17 @@ public class IssueManager {
         allIssues.clear();
 
         Issue issue, sameIssue;
-        for (XNamedGraph accessibilityDataGraph : accessibilityDataGraphs) {
-            XEnumeration assertions = accessibilityDataGraph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
+        for (XNamedGraph graph : accessibilityDataGraphs) {
+            Assertions assertions = new Assertions(graph);
+            XEnumeration assertionEnum = graph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
             XResource assertion = null;
-            while (assertions.hasMoreElements()) {
-                assertion = ((Statement)assertions.nextElement()).Subject;
+            while (assertionEnum.hasMoreElements()) {
+                assertion = ((Statement)assertionEnum.nextElement()).Subject;
                 try {
-                    issue = new RDFIssue(assertion, accessibilityDataGraph);
+                    issue = assertions.read(assertion, checkers).getIssue();
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, null, e);
                     continue;
-                }
-                if (issue.getElement() != null) {
-                    if (!issue.getElement().exists()) {
-                        logger.info("Element does not exist, removing issue");
-                        issue.remove();
-                        continue;
-                    }
                 }
                 if (allIssues.contains(issue)) {
                     sameIssue = allIssues.remove(allIssues.indexOf(issue));

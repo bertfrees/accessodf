@@ -15,6 +15,7 @@ import com.sun.star.lang.Locale;
 import com.sun.star.style.ParagraphAdjust;
 import com.sun.star.style.XStyle;
 import com.sun.star.table.XTableRows;
+import com.sun.star.text.TextContentAnchorType;
 
 import com.sun.star.lang.WrappedTargetException;
 import com.sun.star.lang.IllegalArgumentException;
@@ -64,6 +65,7 @@ public class MainRepairer implements Repairer {
         supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyHeading));
         supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_FlashText));
         supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_SmallText));
+        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_ImageAnchorFloat));
         supportedChecks.add(new DaisyCheck(DaisyCheck.ID.A_EmptyTitleField));
     }
 
@@ -95,8 +97,17 @@ public class MainRepairer implements Repairer {
                     if (element == null) { return false; }
                     try {
                         properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, ((DrawObject)element).getXNamed());
-                        return (AnyConverter.toString(properties.getPropertyValue("Title")).length() > 0 &&
-                                AnyConverter.toString(properties.getPropertyValue("Description")).length() > 0);
+                        return (AnyConverter.toString(properties.getPropertyValue("Title")).length() > 0);
+                    } catch (ClassCastException e) {
+                    } catch (Exception e) {
+                    }
+
+                } else if (id.equals(GeneralCheck.ID.E_ImageAnchorFloat.name())) {
+
+                    try {
+                        properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, ((DrawObject)element).getXNamed());
+                        properties.setPropertyValue("AnchorType", TextContentAnchorType.AS_CHARACTER);
+                        return true;
                     } catch (ClassCastException e) {
                     } catch (Exception e) {
                     }
@@ -279,13 +290,14 @@ public class MainRepairer implements Repairer {
                 return RepairMode.SEMI_AUTOMATED;
 
             } else if (id.equals(GeneralCheck.ID.A_JustifiedText.name()) ||
-                id.equals(GeneralCheck.ID.A_NoSubtitle.name()) ||
-                id.equals(GeneralCheck.ID.A_BreakRows.name()) ||
-                id.equals(GeneralCheck.ID.E_EmptyTitle.name()) ||
-                id.equals(GeneralCheck.ID.E_NoHyperlinkLanguage.name()) ||
-                id.equals(GeneralCheck.ID.E_EmptyHeading.name()) ||
-                id.equals(GeneralCheck.ID.A_FlashText.name()) ||
-                id.equals(GeneralCheck.ID.A_SmallText.name())) {
+                       id.equals(GeneralCheck.ID.A_NoSubtitle.name()) ||
+                       id.equals(GeneralCheck.ID.A_BreakRows.name()) ||
+                       id.equals(GeneralCheck.ID.E_EmptyTitle.name()) ||
+                       id.equals(GeneralCheck.ID.E_NoHyperlinkLanguage.name()) ||
+                       id.equals(GeneralCheck.ID.E_EmptyHeading.name()) ||
+                       id.equals(GeneralCheck.ID.A_FlashText.name()) ||
+                       id.equals(GeneralCheck.ID.A_SmallText.name()) ||
+                       id.equals(GeneralCheck.ID.E_ImageAnchorFloat.name())) {
 
                 return RepairMode.AUTO;
 

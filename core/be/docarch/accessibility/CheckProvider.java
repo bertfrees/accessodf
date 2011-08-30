@@ -12,7 +12,7 @@ public class CheckProvider implements Provider<Check> {
     public CheckProvider(Provider<Checker> checkers) {
 
         for (Checker checker : checkers.list()) {
-            for (Check check : checker.getChecks()) {
+            for (Check check : checker.list()) {
                 checks.put(check.getIdentifier(), check);
             }
         }

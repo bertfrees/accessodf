@@ -73,7 +73,7 @@ public class GeneralCheck extends Check {
 
         if (identifier.name().startsWith("E_")) {
             return Status.ERROR;
-        } else if (identifier == ID.A_FormulaWithoutAlt) {
+        } else if (identifier == ID.A_ImageWithoutAlt) {
             return Status.ERROR;
         } else if (identifier == ID.A_LowContrast) {
             return Status.ERROR;
