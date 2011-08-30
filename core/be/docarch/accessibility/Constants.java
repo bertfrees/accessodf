@@ -23,12 +23,12 @@ public abstract class Constants {
     private final static String XSD =  "http://www.w3.org/2001/XMLSchema#";
     private final static String A11Y = "http://www.docarch.be/accessibility-checker/";
 
-    public final static String A11Y_CHECKER =        A11Y + "checker";
-    public final static String A11Y_DOCUMENT =       A11Y + "types#document";
-    public final static String A11Y_PARAGRAPH =      A11Y + "types#paragraph";
-    public final static String A11Y_SPAN =           A11Y + "types#span";
-    public final static String A11Y_TABLE =          A11Y + "types#table";
-    public final static String A11Y_OBJECT =         A11Y + "types#object";
+    public final static String A11Y_CHECKER =        A11Y + "Checker";
+    public final static String A11Y_DOCUMENT =       A11Y + "types#Document";
+    public final static String A11Y_PARAGRAPH =      A11Y + "types#Paragraph";
+    public final static String A11Y_SPAN =           A11Y + "types#Span";
+    public final static String A11Y_TABLE =          A11Y + "types#Table";
+    public final static String A11Y_OBJECT =         A11Y + "types#Object";
     public final static String A11Y_CHECKS =         A11Y + "checks#";
     public final static String A11Y_START =          A11Y + "start";
     public final static String A11Y_END =            A11Y + "end";

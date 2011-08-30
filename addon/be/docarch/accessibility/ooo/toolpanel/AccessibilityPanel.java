@@ -25,7 +25,6 @@ import com.sun.star.lang.EventObject;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XComponent;
 import com.sun.star.accessibility.XAccessible;
-import com.sun.star.awt.PushButtonType;
 import com.sun.star.awt.XControl;
 import com.sun.star.awt.XControlModel;
 import com.sun.star.awt.XTextComponent;
@@ -597,6 +596,7 @@ public class AccessibilityPanel extends ComponentBase
 
         updateDialogFields();
         updateFocus();
+        if (check2NodeMap.isEmpty()) { showSuccesWindow(); }
 
         logger.exiting("AccessibilityPanel", "refresh");
 
@@ -1056,6 +1056,7 @@ public class AccessibilityPanel extends ComponentBase
                 }
                 updateDialogFields();
                 updateFocus();
+                if (check2NodeMap.isEmpty()) { showSuccesWindow(); }
 
             } else if (source.equals(repairButton)) {
 
@@ -1093,6 +1094,7 @@ public class AccessibilityPanel extends ComponentBase
                 }
                 updateDialogFields();
                 updateFocus();
+                if (check2NodeMap.isEmpty()) { showSuccesWindow(); }
             }
 
         } catch (Exception ex) {
@@ -1337,11 +1339,15 @@ public class AccessibilityPanel extends ComponentBase
         window.setPosSize(posSize.X - horizontalOffset, posSize.Y - verticalOffset, posSize.Width, posSize.Height, PosSize.POSSIZE);
     }
 
-    private void handleUnexpectedException (Exception ex) {
+    private void handleUnexpectedException(Exception ex) {
 
         logger.log(Level.SEVERE, null, ex);
         UnoAwtUtils.showErrorMessageBox(docWindowPeer, "Unexpected exception","Unexpected exception");
 
+    }
+
+    private void showSuccesWindow() {
+        UnoAwtUtils.showInfoMessageBox(docWindowPeer, "Congradulations","Your document is 100% accessible!");
     }
 
     //XToolPanel
