@@ -96,20 +96,8 @@ public final class AccessibilityCheckerAddOn extends WeakBase
          logger.info(String.valueOf(counter++));
 
          if ( aURL.Protocol.startsWith("be.docarch.accessibility.ooo.accessibilitycheckeraddon")) {
-            if ( aURL.Path.compareTo("Command0") == 0 ) {
 
-                UnoGUI unoGui = null;
-
-                try {
-                    unoGui = new UnoGUI(m_xContext, m_xFrame);
-                    unoGui.showAccessibilityDialog();
-                } finally {
-                    unoGui.clean();
-                }
-
-                return;
-
-            } else if ( aURL.Path.compareTo("Command1") == 0 ) {
+            if ( aURL.Path.compareTo("TaskPanelCommand") == 0 ) {
 
                 try {
 
@@ -181,9 +169,7 @@ public final class AccessibilityCheckerAddOn extends WeakBase
     {
         if ( aURL.Protocol.startsWith("be.docarch.accessibility.ooo.accessibilitycheckeraddon"))
         {
-            if ( aURL.Path.compareTo("Command0") == 0 )
-                return this;
-            else if ( aURL.Path.compareTo("Command1") == 0 )
+            if ( aURL.Path.compareTo("TaskPanelCommand") == 0 )
                 return this;
         }
         return null;

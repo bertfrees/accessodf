@@ -15,6 +15,7 @@ import be.docarch.accessibility.Constants;
 public abstract class URIs {
 
     public static XURI RDF_TYPE;
+    public static XURI RDFS_SUBCLASSOF;
 
     public static XURI EARL_TESTSUBJECT;
     public static XURI EARL_TESTRESULT;
@@ -54,7 +55,8 @@ public abstract class URIs {
 
         try {
             
-            RDF_TYPE = URI.create(context, Constants.RDF_TYPE);
+            RDF_TYPE = URI.createKnown(context, com.sun.star.rdf.URIs.RDF_TYPE);
+            RDFS_SUBCLASSOF = URI.createKnown(context, com.sun.star.rdf.URIs.RDFS_SUBCLASSOF);
 
             EARL_TESTSUBJECT = URI.create(context, Constants.EARL_TESTSUBJECT);
             EARL_TESTRESULT = URI.create(context, Constants.EARL_TESTRESULT);

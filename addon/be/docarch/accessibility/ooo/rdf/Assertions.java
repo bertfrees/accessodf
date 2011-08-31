@@ -72,12 +72,6 @@ public class Assertions extends RDFClass {
                 return null;
             }
 
-            XResource testresult = BlankNode.create(xContext, ((Statement)testResultEnum.nextElement()).Object.getStringValue());
-            if (!graph.getStatements(testresult, URIs.EARL_OUTCOME, null).hasMoreElements() ||
-                !graph.getStatements(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT).hasMoreElements()) {
-                return null;
-            }
-
             XURI assertor = URI.create(xContext, ((Statement)assertorEnum.nextElement()).Object.getStringValue());
             checker = assertors.read(assertor, checkers).getChecker();
 
@@ -86,6 +80,12 @@ public class Assertions extends RDFClass {
 
             XResource testsubject = BlankNode.create(xContext, ((Statement)testSubjectEnum.nextElement()).Object.getStringValue());
             element = testSubjects.read(testsubject).getElement();
+
+            XResource testresult = BlankNode.create(xContext, ((Statement)testResultEnum.nextElement()).Object.getStringValue());
+            if (!graph.getStatements(testresult, URIs.EARL_OUTCOME, null).hasMoreElements() ||
+                !graph.getStatements(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT).hasMoreElements()) {
+                return null;
+            }
 
             XEnumeration timestamps = graph.getStatements(testresult, URIs.DCT_DATE, null);
             if (!timestamps.hasMoreElements()) {
@@ -107,7 +107,7 @@ public class Assertions extends RDFClass {
                 issue.repaired(true);
             }
 
-            return new Assertion(issue);
+            return new Assertion(issue, assertion, testresult);
 
         } finally {
             if (!valid) {
@@ -122,7 +122,7 @@ public class Assertions extends RDFClass {
 
     public class Assertion implements IssueListener {
 
-        private Issue issue;
+        private final Issue issue;
         private XResource assertion;
         private XResource testresult;
 
@@ -131,28 +131,38 @@ public class Assertions extends RDFClass {
             issue.addListener(this);
         }
 
+        private Assertion(Issue issue,
+                          XResource assertion,
+                          XResource testresult) {
+
+            this(issue);
+            this.assertion = assertion;
+            this.testresult = testresult;
+        }
+
         public Issue getIssue() {
             return issue;
         }
 
         public XResource write() throws Exception {
 
-            assertion = xRepository.createBlankNode();
-            testresult = xRepository.createBlankNode();
+            if (assertion == null) {
+                assertion = xRepository.createBlankNode();
+                testresult = xRepository.createBlankNode();
 
-            XURI testcase = testCases.create(issue.getCheck()).write();
-            XURI assertor = assertors.create(issue.getChecker()).write();
-            XResource subject = testSubjects.create(issue.getElement()).write();
+                XURI testcase = testCases.create(issue.getCheck()).write();
+                XURI assertor = assertors.create(issue.getChecker()).write();
+                XResource subject = testSubjects.create(issue.getElement()).write();
 
-            graph.addStatement(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT);
-            graph.addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_FAILED);
-            graph.addStatement(testresult, URIs.DCT_DATE, Literal.create(xContext, dateFormat.format(issue.getCheckDate())));
-            graph.addStatement(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
-            graph.addStatement(assertion, URIs.EARL_RESULT, testresult);
-            graph.addStatement(assertion, URIs.EARL_TEST, testcase);
-            graph.addStatement(assertion, URIs.EARL_SUBJECT, subject);
-            graph.addStatement(assertion, URIs.EARL_ASSERTEDBY, assertor);
-
+                graph.addStatement(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT);
+                graph.addStatement(testresult, URIs.EARL_OUTCOME, URIs.EARL_FAILED);
+                graph.addStatement(testresult, URIs.DCT_DATE, Literal.create(xContext, dateFormat.format(issue.getCheckDate())));
+                graph.addStatement(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
+                graph.addStatement(assertion, URIs.EARL_RESULT, testresult);
+                graph.addStatement(assertion, URIs.EARL_TEST, testcase);
+                graph.addStatement(assertion, URIs.EARL_SUBJECT, subject);
+                graph.addStatement(assertion, URIs.EARL_ASSERTEDBY, assertor);
+            }
             return assertion;
         }
 

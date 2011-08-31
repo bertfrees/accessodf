@@ -16,7 +16,6 @@ public abstract class Constants {
 
     public final static String BERT =  "http://www.docarch.be/bert";
 
-    private final static String RDF =  "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
     private final static String DCT =  "http://purl.org/dc/elements/1.1/";
     private final static String FOAF = "http://xmlns.com/foaf/0.1/";
     private final static String EARL = "http://www.w3.org/ns/earl#";
@@ -33,8 +32,6 @@ public abstract class Constants {
     public final static String A11Y_START =          A11Y + "start";
     public final static String A11Y_END =            A11Y + "end";
     public final static String A11Y_IGNORE =         A11Y + "ignore";
-    public static final String RDF_TYPE =            RDF + "type";
-    public static final String RDF_DATATYPE =        RDF + "datatype";
     public static final String XSD_INTEGER =         XSD + "integer";
     public static final String XSD_STRING =          XSD + "string";
     public static final String XSD_BOOLEAN =         XSD + "boolean";

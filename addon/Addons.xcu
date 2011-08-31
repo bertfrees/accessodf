@@ -1,87 +1,46 @@
-<?xml version='1.0' encoding='UTF-8'?>
+﻿<?xml version='1.0' encoding='UTF-8'?>
 
 <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Addons" oor:package="org.openoffice.Office">
   <node oor:name="AddonUI">
-    <node oor:name="OfficeMenuBar">
+    <node oor:name="OfficeMenuBarMerging">
       <node oor:name="be.docarch.accessibility.ooo.accessibilitycheckeraddon" oor:op="replace">
-        <prop oor:name="Title" oor:type="xs:string">
-          <value/>
-          <value xml:lang="en">Accessibility</value>
-		  <value xml:lang="es">Accesibilidad</value>
-		  <value xml:lang="nl">Toegankelijkheid</value>
-        </prop>
-        <prop oor:name="Target" oor:type="xs:string">
-          <value>_self</value>
-        </prop>
-        <prop oor:name="ImageIdentifier" oor:type="xs:string">
-          <value/>
-        </prop>
-        <prop oor:name="Context">
-            <value>com.sun.star.text.TextDocument</value>
-        </prop>
-        <node oor:name="Submenu">
-          <!--
-          <node oor:name="m1" oor:op="replace">
-            <prop oor:name="URL" oor:type="xs:string">
-              <value>be.docarch.accessibility.ooo.accessibilitycheckeraddon:Command0</value>
-            </prop>
-            <prop oor:name="ImageIdentifier" oor:type="xs:string">
-              <value/>
-            </prop>
-            <prop oor:name="Target" oor:type="xs:string">
-              <value>_self</value>
-            </prop>
-            <prop oor:name="Context" oor:type="xs:string">
-              <value/>
-            </prop>
-            <prop oor:name="Title" oor:type="xs:string">
-              <value/>
-              <value xml:lang="en">Modal Dialog</value>
-            </prop>
+        <node oor:name="S1" oor:op="replace">
+         <prop oor:name="MergePoint">
+          <value>.uno:ToolsMenu\.uno:SpellingAndGrammarDialog</value>
+         </prop>
+         <prop oor:name="MergeCommand">
+          <value>AddAfter</value>
+         </prop>
+         <prop oor:name="MergeFallback">
+          <value>AddPath</value>
+         </prop>
+         <prop oor:name="MergeContext">
+          <value>com.sun.star.text.TextDocument</value>
+         </prop>
+         <node oor:name="MenuItems">
+          <node oor:name="M1" oor:op="replace">
+           <prop oor:name="URL">
+            <value>be.docarch.accessibility.ooo.accessibilitycheckeraddon:TaskPanelCommand</value>
+           </prop>
+           <prop oor:name="Title" oor:type="xs:string">							
+            <value xml:lang="en">~Accessibility evalutation…</value>
+		    <value xml:lang="es">~Accesibilidad…</value>
+		    <value xml:lang="nl">~Toegankelijkheid…</value>                            
+           </prop>
           </node>
-          -->
-          <node oor:name="m2" oor:op="replace">
-            <prop oor:name="URL" oor:type="xs:string">
-              <value>be.docarch.accessibility.ooo.accessibilitycheckeraddon:Command1</value>
-            </prop>
-            <prop oor:name="ImageIdentifier" oor:type="xs:string">
-              <value/>
-            </prop>
-            <prop oor:name="Target" oor:type="xs:string">
-              <value>_self</value>
-            </prop>
-            <prop oor:name="Context" oor:type="xs:string">
-              <value/>
-            </prop>
-            <prop oor:name="Title" oor:type="xs:string">
-              <value/>
-              <value xml:lang="en">Toolpanel</value>
-            </prop>
-          </node>
+         </node>
         </node>
       </node>
     </node>
 
     <node oor:name="Images">
-      <!--
-      <node oor:name="be.docarch.accessibility.ooo.accessibilitycheckeraddon.command0.images" oor:op="replace">
+      <node oor:name="be.docarch.accessibility.ooo.accessibilitycheckeraddon.taskpanelcommand.images" oor:op="replace">
         <prop oor:name="URL" oor:type="xs:string">
-          <value>be.docarch.accessibility.ooo.accessibilitycheckeraddon:Command0</value>
+          <value>be.docarch.accessibility.ooo.accessibilitycheckeraddon:TaskPanelCommand</value>
         </prop>
         <node oor:name="UserDefinedImages">
           <prop oor:name="ImageSmallURL">
-            <value/>
-          </prop>
-        </node>
-      </node>
-      -->
-      <node oor:name="be.docarch.accessibility.ooo.accessibilitycheckeraddon.command1.images" oor:op="replace">
-        <prop oor:name="URL" oor:type="xs:string">
-          <value>be.docarch.accessibility.ooo.accessibilitycheckeraddon:Command1</value>
-        </prop>
-        <node oor:name="UserDefinedImages">
-          <prop oor:name="ImageSmallURL">
-            <value/>
+            <value>%origin%/images/logo_16x16.png</value>
           </prop>
         </node>
       </node>
