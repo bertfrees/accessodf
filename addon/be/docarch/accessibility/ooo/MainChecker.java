@@ -539,20 +539,26 @@ public class MainChecker implements RunnableChecker {
                                          this));
         }
 
-        XTextCursor cursor = textRange.getText().createTextCursorByRange(textRange);
-        cursor.gotoStart(false);
-      //traverseWords((XWordCursor)UnoRuntime.queryInterface(XWordCursor.class, cursor));
+        if (textRange != null) {
 
-        int[] pageRange = new int[2];
-        if (inTable) {
-            viewCursor.gotoRange(cursor, false);
-            pageRange[0] = pageCursor.getPage();
-            cursor.gotoEnd(false);
-            viewCursor.gotoRange(cursor, false);
-            pageRange[1] = pageCursor.getPage();
+            XTextCursor cursor = textRange.getText().createTextCursorByRange(textRange);
+            cursor.gotoStart(false);
+
+            if (inTable) {
+                int[] pageRange = new int[2];
+                viewCursor.gotoRange(cursor, false);
+                pageRange[0] = pageCursor.getPage();
+                cursor.gotoEnd(false);
+                viewCursor.gotoRange(cursor, false);
+                pageRange[1] = pageCursor.getPage();
+                return pageRange;
+            }
         }
 
-        return pageRange;
+        return null;
+
+      //traverseWords((XWordCursor)UnoRuntime.queryInterface(XWordCursor.class, cursor));
+        
     }
 
     private void traverseTextPortions(Paragraph paragraph,

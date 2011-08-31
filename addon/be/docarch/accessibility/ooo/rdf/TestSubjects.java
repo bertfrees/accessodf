@@ -174,12 +174,7 @@ public class TestSubjects extends RDFClass {
 
             if (testsubject == null) {
                 switch (type) {
-                    case DOCUMENT:
-                        testsubject = xRepository.createBlankNode();
-                        graph.addStatement(testsubject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
-                  //graph.addStatement(URIs.A11Y_DOCUMENT, URIs.RDFS_SUBCLASSOF, URIs.EARL_TESTSUBJECT);
-                        graph.addStatement(testsubject, URIs.RDF_TYPE, URIs.A11Y_DOCUMENT);
-                        break;
+                    case DOCUMENT: writeDocument(); break;
                     case PARAGRAPH: writeParagraph((Paragraph)element); break;
                     case SPAN: writeSpan((Span)element); break;
                     case TABLE: writeTable((Table)element); break;
@@ -187,6 +182,14 @@ public class TestSubjects extends RDFClass {
                 }
             }
             return testsubject;
+        }
+
+        private void writeDocument() throws Exception {
+        
+            testsubject = xRepository.createBlankNode();
+            graph.addStatement(testsubject, URIs.RDF_TYPE, URIs.EARL_TESTSUBJECT);
+      //graph.addStatement(URIs.A11Y_DOCUMENT, URIs.RDFS_SUBCLASSOF, URIs.EARL_TESTSUBJECT);
+            graph.addStatement(testsubject, URIs.RDF_TYPE, URIs.A11Y_DOCUMENT);
         }
 
         private void writeParagraph(Paragraph paragraph) throws Exception {
