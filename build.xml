@@ -10,9 +10,8 @@
 	<target name="-pre-init" depends="-init-build,-copy-external-jars"/>
 	
 	
-    <target name="-init-build">
-	
-	    <property file="build.windows.properties"/>
+    <target name="-init-build"
+			depends="-windows-properties,-macosx-properties,-linux-properties">
 		
 	    <pathconvert property="libs.OpenOffice.org 3.3.classpath">
             <path>
@@ -70,6 +69,20 @@
 	</target>
 	
 	
+	<!-- load platform dependent properties -->
+    <target name="-windows-properties" if="is.windows" depends="-detect-os">
+        <property file="build.windows.properties"/>
+    </target>
+
+    <target name="-macosx-properties" if="is.macosx" depends="-detect-os">
+        <property file="build.macosx.properties"/>
+    </target>
+
+    <target name="-linux-properties" if="is.linux" depends="-detect-os">
+        <property file="build.linux.properties"/>
+    </target>
+	
+	
 	<!-- make external jars folder -->
     <target name="-copy-external-jars" depends="-init-build" unless="external.jar.dir.exists">
         <pathconvert property="classpath.without.ooo.space.sep" pathsep=" ">
@@ -80,6 +93,26 @@
         <copy todir="${dist.dir}${file.separator}${external.jar.dir}" flatten="true">
             <fileset dir="." includes="${classpath.without.ooo.space.sep}"/>
         </copy>
+    </target>
+	
+	
+	<!-- detect os -->
+    <target name="-detect-os">
+        <condition property="is.windows">
+            <os family="windows"/>
+        </condition>
+        <condition property="is.macosx">
+           <and>
+               <os family="mac"/>
+               <os family="unix"/>
+           </and>
+        </condition>
+        <condition property="is.linux">
+            <and>
+                <os family="unix"/>
+                <not><os family="mac"/></not>
+            </and>
+        </condition>
     </target>
 	
 	
