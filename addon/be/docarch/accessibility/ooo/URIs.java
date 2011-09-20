@@ -50,6 +50,7 @@ public abstract class URIs {
     public static XURI A11Y_TABLE;
     public static XURI A11Y_OBJECT;
     public static XURI A11Y_IGNORE;
+    public static XURI A11Y_COUNT;
 
     public static void init(XComponentContext context) {
 
@@ -86,6 +87,7 @@ public abstract class URIs {
             A11Y_START = URI.create(context, Constants.A11Y_START);
             A11Y_END = URI.create(context, Constants.A11Y_END);
             A11Y_IGNORE = URI.create(context, Constants.A11Y_IGNORE);
+            A11Y_COUNT = URI.create(context, Constants.A11Y_COUNT);
             A11Y_DOCUMENT = URI.create(context, Constants.A11Y_DOCUMENT);
             A11Y_PARAGRAPH = URI.create(context, Constants.A11Y_PARAGRAPH);
             A11Y_SPAN = URI.create(context, Constants.A11Y_SPAN);

@@ -207,7 +207,7 @@ public class MainChecker implements RunnableChecker {
             }
             for (Check c : detectedChecks.keySet()) {
                 if (detectedChecks.get(c) > 10) {
-                    assertions.create(new Issue(null, c, this)).write();
+                    assertions.create(new Issue(null, c, this, detectedChecks.get(c))).write();
                 }
             }
 

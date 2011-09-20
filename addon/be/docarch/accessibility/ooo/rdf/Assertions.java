@@ -50,14 +50,13 @@ public class Assertions extends RDFClass {
                           Provider<Checker> checkers)
                    throws Exception {
 
-        boolean valid = false;
+        Checker checker = null;
+        Check check = null;
+        Element element = null;
+        Date checkDate = null;
+        int count = 1;
 
         try {
-
-            Element element;
-            Check check;
-            Checker checker;
-            Date checkDate;
 
             if (!graph.getStatements(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION).hasMoreElements()) { return null; }
 
@@ -65,58 +64,52 @@ public class Assertions extends RDFClass {
             XEnumeration testSubjectEnum = graph.getStatements(assertion, URIs.EARL_SUBJECT, null);
             XEnumeration testCaseEnum = graph.getStatements(assertion, URIs.EARL_TEST, null);
             XEnumeration testResultEnum = graph.getStatements(assertion, URIs.EARL_RESULT, null);
-            if (!assertorEnum.hasMoreElements() ||
-                !testSubjectEnum.hasMoreElements() ||
-                !testCaseEnum.hasMoreElements() ||
-                !testResultEnum.hasMoreElements()) {
-                return null;
-            }
-
+            if (!assertorEnum.hasMoreElements())    { throw new Exception("no EARL_ASSERTEDBY statement"); }
+            if (!testSubjectEnum.hasMoreElements()) { throw new Exception("no EARL_SUBJECT statement"); }
+            if (!testCaseEnum.hasMoreElements())    { throw new Exception("no EARL_TEST statement"); }
+            if (!testResultEnum.hasMoreElements())  { throw new Exception("no EARL_RESULT statement"); }
             XURI assertor = URI.create(xContext, ((Statement)assertorEnum.nextElement()).Object.getStringValue());
             checker = assertors.read(assertor, checkers).getChecker();
-
             XURI testcase = URI.create(xContext, ((Statement)testCaseEnum.nextElement()).Object.getStringValue());
             check = testCases.read(testcase, checker).getCheck();
-
             XResource testsubject = BlankNode.create(xContext, ((Statement)testSubjectEnum.nextElement()).Object.getStringValue());
             element = testSubjects.read(testsubject).getElement();
-
             XResource testresult = BlankNode.create(xContext, ((Statement)testResultEnum.nextElement()).Object.getStringValue());
-            if (!graph.getStatements(testresult, URIs.EARL_OUTCOME, null).hasMoreElements() ||
-                !graph.getStatements(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT).hasMoreElements()) {
-                return null;
-            }
-
+            if (!graph.getStatements(testresult, URIs.EARL_OUTCOME, null).hasMoreElements())             { throw new Exception("no EARL_OUTCOME statement"); }
+            if (!graph.getStatements(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT).hasMoreElements()) { throw new Exception("not of type EARL_TESTRESULT"); }
             XEnumeration timestamps = graph.getStatements(testresult, URIs.DCT_DATE, null);
-            if (!timestamps.hasMoreElements()) {
-                return null;
-            }
+            if (!timestamps.hasMoreElements()) { throw new Exception("not DCT_DATE statement"); }
             checkDate = dateFormat.parse(((Statement)timestamps.nextElement()).Object.getStringValue());
-
-            valid = true;
-            Issue issue = new Issue(element, check, checker, checkDate);
-
+            XEnumeration counts = graph.getStatements(testresult, URIs.A11Y_COUNT, null);
+            if (counts.hasMoreElements()) {
+                count = Integer.parseInt(((Statement)counts.nextElement()).Object.getStringValue());
+            }
+            Issue issue = new Issue(element, check, checker, checkDate, count);
             XEnumeration ignore = graph.getStatements(testresult, URIs.A11Y_IGNORE, null);
             if (ignore.hasMoreElements()) {
                 if (((Statement)ignore.nextElement()).Object.getStringValue().equals("true")) {
                     issue.ignored(true);
                 }
-            }
-            
+            }            
             if (graph.getStatements(testresult, URIs.EARL_OUTCOME, URIs.EARL_PASSED).hasMoreElements()) {
                 issue.repaired(true);
             }
-
             return new Assertion(issue, assertion, testresult);
 
-        } finally {
-            if (!valid) {
-                try {
-                    graph.removeStatements(assertion, null, null);
-                } catch (Exception e) {
-                }
-                throw new Exception("Invalid assertion: Removed from report.");
+        } catch (Exception e) {
+            String message = "Invalid assertion" +
+                    "\nChecker: " + ((checker==null) ? "?" : checker.getIdentifier()) +
+                    "\nCheck: "   + ((check==null)   ? "?" : check.getIdentifier()) +
+                    "\nElement: " + ((element==null) ? "?" : element.toString()) +
+                    "\nException: " + e.getMessage();
+            try {
+                graph.removeStatements(assertion, null, null);
+                message += "\nAssertion removed from report.";
+            } catch (Exception ee) {
+                message += "\nCould not remove assertion from report.";
             }
+
+            throw new Exception(message);
         }
     }
 
@@ -162,6 +155,9 @@ public class Assertions extends RDFClass {
                 graph.addStatement(assertion, URIs.EARL_TEST, testcase);
                 graph.addStatement(assertion, URIs.EARL_SUBJECT, subject);
                 graph.addStatement(assertion, URIs.EARL_ASSERTEDBY, assertor);
+                if (issue.getCount()>1) {
+                    graph.addStatement(testresult, URIs.A11Y_COUNT, Literal.create(xContext, String.valueOf(issue.getCount())));
+                }
             }
             return assertion;
         }

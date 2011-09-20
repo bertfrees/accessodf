@@ -16,26 +16,34 @@ public class Issue {
     private final Check check;
     private final Checker checker;
     private final Date checkDate;
+    private final int count;
 
     private boolean ignored = false;
     private boolean repaired = false;
 
-    public Issue(Element element,
-                 Check check,
-                 Checker checker) {
+    public Issue(Element element, Check check, Checker checker) {
+        this(element, check, checker, 1);
+    }
 
-        this(element, check, checker,new Date());
+    public Issue(Element element, Check check, Checker checker, int count) {
+        this(element, check, checker, new Date(), count);
+    }
+
+    public Issue(Element element, Check check, Checker checker, Date checkDate) {
+        this(element, check, checker, checkDate, 1);
     }
 
     public Issue(Element element,
                  Check check,
                  Checker checker,
-                 Date checkDate) {
+                 Date checkDate,
+                 int count) {
 
         this.element = element;
         this.check = check;
         this.checker = checker;
         this.checkDate = checkDate;
+        this.count = count;
     }
 
     public Element getElement() {
@@ -60,6 +68,10 @@ public class Issue {
 
     public Checker getChecker() {
         return checker;
+    }
+
+    public int getCount() {
+        return count;
     }
 
     public void ignored(boolean ignored) {

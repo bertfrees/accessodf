@@ -32,6 +32,7 @@ public abstract class Constants {
     public final static String A11Y_START =          A11Y + "start";
     public final static String A11Y_END =            A11Y + "end";
     public final static String A11Y_IGNORE =         A11Y + "ignore";
+    public final static String A11Y_COUNT =          A11Y + "count";
     public static final String XSD_INTEGER =         XSD + "integer";
     public static final String XSD_STRING =          XSD + "string";
     public static final String XSD_BOOLEAN =         XSD + "boolean";
