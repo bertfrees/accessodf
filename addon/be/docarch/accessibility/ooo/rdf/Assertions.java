@@ -50,6 +50,7 @@ public class Assertions extends RDFClass {
                           Provider<Checker> checkers)
                    throws Exception {
 
+        XResource testresult = null;
         Checker checker = null;
         Check check = null;
         Element element = null;
@@ -74,7 +75,7 @@ public class Assertions extends RDFClass {
             check = testCases.read(testcase, checker).getCheck();
             XResource testsubject = BlankNode.create(xContext, ((Statement)testSubjectEnum.nextElement()).Object.getStringValue());
             element = testSubjects.read(testsubject).getElement();
-            XResource testresult = BlankNode.create(xContext, ((Statement)testResultEnum.nextElement()).Object.getStringValue());
+            testresult = BlankNode.create(xContext, ((Statement)testResultEnum.nextElement()).Object.getStringValue());
             if (!graph.getStatements(testresult, URIs.EARL_OUTCOME, null).hasMoreElements())             { throw new Exception("no EARL_OUTCOME statement"); }
             if (!graph.getStatements(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT).hasMoreElements()) { throw new Exception("not of type EARL_TESTRESULT"); }
             XEnumeration timestamps = graph.getStatements(testresult, URIs.DCT_DATE, null);
@@ -104,6 +105,9 @@ public class Assertions extends RDFClass {
                     "\nException: " + e.getMessage();
             try {
                 graph.removeStatements(assertion, null, null);
+                if (testresult != null) {
+                    graph.removeStatements(testresult, null, null);
+                }
                 message += "\nAssertion removed from report.";
             } catch (Exception ee) {
                 message += "\nCould not remove assertion from report.";

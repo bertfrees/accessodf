@@ -33,7 +33,8 @@ import be.docarch.accessibility.Element;
  */
 public class MainRepairer implements Repairer {
 
-    private Collection<Check> supportedChecks;
+    private Collection<Check> supportedGeneralChecks;
+    private Collection<Check> supportedElementSpecificChecks;
     private Document document;
     private static XDispatchHelper dispatcher;
     private static XDispatchProvider dispatchProvider;
@@ -49,24 +50,26 @@ public class MainRepairer implements Repairer {
         dispatchProvider = (XDispatchProvider)UnoRuntime.queryInterface(
                                 XDispatchProvider.class, document.xModel.getCurrentController().getFrame());
 
-        supportedChecks = new HashSet<Check>();
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_ImageWithoutAlt));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_FormulaWithoutAlt));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_ObjectWithoutAlt));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_NoDefaultLanguage));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_LinkedImage));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_NoHyperlinkLanguage));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoHyperlinkText));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoTableHeading));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_JustifiedText));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoSubtitle));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_BreakRows));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyTitle));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyHeading));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_FlashText));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.A_SmallText));
-        supportedChecks.add(new GeneralCheck(GeneralCheck.ID.E_ImageAnchorFloat));
-        supportedChecks.add(new DaisyCheck(DaisyCheck.ID.A_EmptyTitleField));
+        supportedElementSpecificChecks = new HashSet<Check>();
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_ImageWithoutAlt));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_FormulaWithoutAlt));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_ObjectWithoutAlt));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_LinkedImage));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.E_NoHyperlinkLanguage));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoHyperlinkText));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoTableHeading));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_JustifiedText));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_NoSubtitle));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_BreakRows));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyTitle));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.E_EmptyHeading));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_FlashText));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.A_SmallText));
+        supportedElementSpecificChecks.add(new GeneralCheck(GeneralCheck.ID.E_ImageAnchorFloat));
+
+        supportedGeneralChecks = new HashSet<Check>();
+        supportedGeneralChecks.add(new GeneralCheck(GeneralCheck.ID.E_NoDefaultLanguage));
+        supportedGeneralChecks.add(new DaisyCheck(DaisyCheck.ID.A_EmptyTitleField));
     }
 
     public String getIdentifier() {
@@ -82,8 +85,7 @@ public class MainRepairer implements Repairer {
             Check check = issue.getCheck();
             Element element = issue.getElement();
 
-            if (check != null &&
-                supports(check)) {
+            if (supports(issue)) {
 
                 String id = check.getIdentifier();
                 
@@ -271,12 +273,12 @@ public class MainRepairer implements Repairer {
         return false;
     }
 
-    public RepairMode getRepairMode(Check check)
+    public RepairMode getRepairMode(Issue issue)
                              throws java.lang.IllegalArgumentException {
 
-        if (supports(check)) {
+        if (supports(issue)) {
 
-            String id = check.getIdentifier();
+            String id = issue.getCheck().getIdentifier();
 
             if (id.equals(GeneralCheck.ID.A_ImageWithoutAlt.name()) ||
                 id.equals(GeneralCheck.ID.A_FormulaWithoutAlt.name()) ||
@@ -307,7 +309,12 @@ public class MainRepairer implements Repairer {
         throw new java.lang.IllegalArgumentException("Check is not supported");
     }
 
-    public boolean supports(Check check) {
-        return supportedChecks.contains(check);
+    public boolean supports(Issue issue) {
+
+        if (issue.getElement() == null) {
+            return supportedGeneralChecks.contains(issue.getCheck());
+        } else {
+            return supportedElementSpecificChecks.contains(issue.getCheck());
+        }
     }
 }

@@ -1017,6 +1017,7 @@ public class MainChecker implements RunnableChecker {
                 for (String id : graphicMetadata) {
                     addIssue(new Issue(o, get(id), this));
                 }
+                graphicMetadata.clear();
             }
         }
     }

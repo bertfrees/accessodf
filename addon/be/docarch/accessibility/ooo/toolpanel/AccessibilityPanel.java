@@ -828,19 +828,20 @@ public class AccessibilityPanel extends ComponentBase
             repairButton.setLabel(L10N_repair);
             if (!selectedIssue.repaired() && !selectedIssue.ignored()) {
                 ignorable = true;
-                repairable = manager.repairable(selectedCheck);
+                repairable = manager.repairable(selectedIssue);
             }
         } else if (selectedCheck != null) {
             ignoreButton.setLabel(L10N_ignoreAll);
             repairButton.setLabel(L10N_repairAll);
-            if (selectedCheck != null) {
-                IssueManager.Status status = manager.getStatus(selectedCheck);
-                if (status != IssueManager.Status.REPAIRED &&
-                    status != IssueManager.Status.IGNORED) {
-                    ignorable = true;                    
-                    if (manager.repairable(selectedCheck)) {
-                        if (manager.getRepairMode(selectedCheck) == Repairer.RepairMode.AUTO) {
+            IssueManager.Status status = manager.getStatus(selectedCheck);
+            if (status != IssueManager.Status.REPAIRED &&
+                status != IssueManager.Status.IGNORED) {
+                ignorable = true;
+                for (Issue issue : manager.getIssuesByCheck(selectedCheck)) {
+                    if (manager.repairable(issue)) {
+                        if (manager.getRepairMode(issue) == Repairer.RepairMode.AUTO) {
                             repairable = true;
+                            break;
                         }
                     }
                 }
@@ -920,8 +921,15 @@ public class AccessibilityPanel extends ComponentBase
       //text += ": " + check.getName(oooLocale);
         text = check.getName(oooLocale);
 
-        if (node.getChildCount()>0) {
-            text += " (" + node.getChildCount() + ")";
+        int i = 0;
+        for (Issue issue : manager.getIssuesByCheck(check)) {
+            if (!issue.repaired() && !issue.ignored()) {
+                i += issue.getCount();
+            }
+        }
+
+        if (i > 1 || node.getChildCount() > 0) {
+            text += " (" + i + ")";
         }
 
       //node.setNodeGraphicURL(imageDir + "/" + image);

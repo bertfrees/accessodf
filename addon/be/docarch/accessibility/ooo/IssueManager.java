@@ -34,7 +34,6 @@ import com.sun.star.beans.PropertyVetoException;
 import be.docarch.accessibility.Check;
 import be.docarch.accessibility.Checker;
 import be.docarch.accessibility.Provider;
-import be.docarch.accessibility.CheckProvider;
 import be.docarch.accessibility.RunnableChecker;
 import be.docarch.accessibility.RemoteRunnableChecker;
 import be.docarch.accessibility.Constants;
@@ -55,18 +54,22 @@ public class IssueManager {
     private static final String TMP_NAME = Constants.TMP_PREFIX;
     private static final File TMP_DIR = Constants.getTmpDirectory();
     
-    public static enum Status { ALERT, ERROR, REPAIRED, IGNORED };
+    public static enum Status { ALERT,
+                                ERROR,
+                                REPAIRED,
+                                IGNORED };
 
     private final Document document;
     private final Settings settings;
     private final Provider<Checker> checkers;
+    private final Provider<Repairer> repairers;
 
     private final List<Issue> allIssues;
     private FilterSorter filterSorter = null;
     private Issue selectedIssue = null;
     private Check selectedCheck = null;
     private Map<Check,List<Issue>> check2IssuesMap = null;
-    private Map<Check,Repairer> check2repairerMap = null;
+  //private Map<Check,Repairer> check2repairerMap = null;
 
     public IssueManager(Document document,
                         Provider<Checker> checkers,
@@ -83,19 +86,11 @@ public class IssueManager {
 
         this.document = document;
         this.checkers = checkers;
-        Provider<Check> checks = new CheckProvider(checkers);
+        this.repairers = repairers;
+      //Provider<Check> checks = new CheckProvider(checkers);
 
         settings = new Settings(document.xContext);
-        check2repairerMap = new HashMap<Check,Repairer>();
-
-        for (Check check : checks.list()) {
-            for (Repairer repairer : repairers.list()) {
-                if (repairer.supports(check)) {
-                    check2repairerMap.put(check, repairer);
-                }
-            }
-        }
-
+      //check2repairerMap = new HashMap<Check,Repairer>();
         check2IssuesMap = new HashMap<Check,List<Issue>>();
 
         filterSorter = new FilterSorter();
@@ -305,25 +300,37 @@ public class IssueManager {
                           NoSuchElementException {
 
         if (issue == null) { return false; }
-        Repairer r = check2repairerMap.get(issue.getCheck());
-        if (r == null) { return false; }
-        boolean succes = r.repair(issue);
-        issue.repaired(succes);
-        return succes;
+        for (Repairer repairer : repairers.list()) {
+            try {
+                if (repairer.repair(issue)) {
+                    issue.repaired(true);
+                    return true;
+                }
+            } catch (Exception e) {
+            }
+        }
+        return false;
     }
 
-    public boolean repairable(Check check) {
-        return check2repairerMap.containsKey(check);
+    public boolean repairable(Issue issue) {
+
+        for (Repairer repairer : repairers.list()) {
+            if (repairer.supports(issue)) {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public RepairMode getRepairMode(Check check)
+    public RepairMode getRepairMode(Issue issue)
                              throws java.lang.IllegalArgumentException {
 
-        Repairer r = check2repairerMap.get(check);
-        if (r == null) { 
-            throw new java.lang.IllegalArgumentException();
+        for (Repairer repairer : repairers.list()) {
+            if (repairer.supports(issue)) {
+                return repairer.getRepairMode(issue);
+            }
         }
-        return r.getRepairMode(check);
+        throw new java.lang.IllegalArgumentException();
     }
 
     private void arrangeIssues() {

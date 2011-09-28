@@ -11,9 +11,9 @@ public interface Repairer {
 
     public String getIdentifier();
 
-    public boolean supports(Check check);
+    public boolean supports(Issue issue);
 
-    public abstract RepairMode getRepairMode(Check check);
+    public abstract RepairMode getRepairMode(Issue issue);
 
     public boolean repair(Issue issue);
     
