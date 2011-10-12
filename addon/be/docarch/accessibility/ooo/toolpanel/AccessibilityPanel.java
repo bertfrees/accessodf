@@ -513,11 +513,11 @@ public class AccessibilityPanel extends ComponentBase
                         urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
                         break;
                     }
-//                    File lib = new File(dir.getAbsolutePath() + File.separator + "lib"); // gaat dit niet automatisch via Class-Path attribuut van de main jar ?
-//                    jars = lib.listFiles(jarFilter);
-//                    for (File jar : jars) {
-//                        urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
-//                    }
+                    File lib = new File(dir.getAbsolutePath() + File.separator + "lib"); // gaat blijkbaar niet automatisch via Class-Path attribuut van de main jar ?
+                    jars = lib.listFiles(jarFilter);
+                    for (File jar : jars) {
+                        urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
+                    }
                 }
             }
 
@@ -1105,8 +1105,8 @@ public class AccessibilityPanel extends ComponentBase
                 if (check2NodeMap.isEmpty()) { showSuccesWindow(); }
             }
 
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, null, ex);
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, null, e);
         } finally {
             ignoreSelectionEvent = false;
         }

@@ -79,7 +79,7 @@ public class Assertors extends RDFClass {
             if (assertor == null) {
                 assertor = URI.create(xContext, checker.getIdentifier());
                 graph.addStatement(assertor, URIs.RDF_TYPE, URIs.EARL_ASSERTOR);
-              //graph.addStatement(URIs.A11Y_CHECKER, URIs.RDFS_SUBCLASSOF, URIs.EARL_ASSERTOR); // in plaats van vorige
+              //graph.addStatement(URIs.A11Y_CHECKER, URIs.RDFS_SUBCLASSOF, URIs.EARL_ASSERTOR); // in plaats van vorige ?
                 graph.addStatement(assertor, URIs.RDF_TYPE, URIs.A11Y_CHECKER);
               //graph.addStatement(assertor, URIs.DCT_DATE, Literal.create(xContext, dateFormat.format(lastChecked))); // terug invoeren !
             }

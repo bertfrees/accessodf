@@ -85,7 +85,6 @@ public class MainChecker implements RunnableChecker {
     private final Map<String,Check> checks;
     
     private boolean daisyChecks = false;
-    private Date lastChecked = null;
     private Collection<String> metadata = null;
     private int numberOfTitles = 0;
     private int numberOfHeadings = 0;
@@ -173,9 +172,8 @@ public class MainChecker implements RunnableChecker {
 
       //document.removeAccessibilityData(getIdentifier());
 
-        lastChecked = new Date();
         reportName = MainChecker.class.getCanonicalName()
-                        + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(lastChecked) + ".rdf";
+                        + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(new Date()) + ".rdf";
 
         try {
 

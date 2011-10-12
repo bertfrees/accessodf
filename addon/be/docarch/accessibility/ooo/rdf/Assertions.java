@@ -59,7 +59,7 @@ public class Assertions extends RDFClass {
 
         try {
 
-            if (!graph.getStatements(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION).hasMoreElements()) { return null; }
+            if (!graph.getStatements(assertion, URIs.RDF_TYPE, URIs.EARL_ASSERTION).hasMoreElements()) { throw new Exception("not of type EARL_ASSERTION"); }
 
             XEnumeration assertorEnum = graph.getStatements(assertion, URIs.EARL_ASSERTEDBY, null);
             XEnumeration testSubjectEnum = graph.getStatements(assertion, URIs.EARL_SUBJECT, null);
@@ -79,7 +79,7 @@ public class Assertions extends RDFClass {
             if (!graph.getStatements(testresult, URIs.EARL_OUTCOME, null).hasMoreElements())             { throw new Exception("no EARL_OUTCOME statement"); }
             if (!graph.getStatements(testresult, URIs.RDF_TYPE, URIs.EARL_TESTRESULT).hasMoreElements()) { throw new Exception("not of type EARL_TESTRESULT"); }
             XEnumeration timestamps = graph.getStatements(testresult, URIs.DCT_DATE, null);
-            if (!timestamps.hasMoreElements()) { throw new Exception("not DCT_DATE statement"); }
+            if (!timestamps.hasMoreElements()) { throw new Exception("no DCT_DATE statement"); }
             checkDate = dateFormat.parse(((Statement)timestamps.nextElement()).Object.getStringValue());
             XEnumeration counts = graph.getStatements(testresult, URIs.A11Y_COUNT, null);
             if (counts.hasMoreElements()) {
@@ -91,7 +91,7 @@ public class Assertions extends RDFClass {
                 if (((Statement)ignore.nextElement()).Object.getStringValue().equals("true")) {
                     issue.ignored(true);
                 }
-            }            
+            }
             if (graph.getStatements(testresult, URIs.EARL_OUTCOME, URIs.EARL_PASSED).hasMoreElements()) {
                 issue.repaired(true);
             }
