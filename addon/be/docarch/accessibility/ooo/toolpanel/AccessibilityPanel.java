@@ -11,6 +11,7 @@ import java.util.TreeMap;
 import java.util.ResourceBundle;
 import java.net.URLClassLoader;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.io.File;
 import java.io.FileFilter;
 
@@ -63,6 +64,7 @@ import be.docarch.accessibility.*;
 import be.docarch.accessibility.ooo.*;
 import be.docarch.accessibility.ooo.rdf.*;
 
+import java.io.UnsupportedEncodingException;
 import com.sun.star.rdf.RepositoryException;
 import com.sun.star.lang.DisposedException;
 import com.sun.star.lang.IllegalArgumentException;
@@ -506,7 +508,7 @@ public class AccessibilityPanel extends ComponentBase
                 }};
             String odt2braillePackage = xPkgInfo.getPackageLocation("be.docarch.odt2braille.ooo.odt2brailleaddon");
             if (odt2braillePackage.length() > 0) {
-                File dir = new File(odt2braillePackage.substring(6));
+                File dir = new File(unoURLtoURL(odt2braillePackage));
                 if (dir.exists()) {
                     File[] jars = dir.listFiles(jarFilter);
                     for (File jar : jars) {
@@ -518,6 +520,8 @@ public class AccessibilityPanel extends ComponentBase
                     for (File jar : jars) {
                         urls.add(new URL("jar:file://" + jar.toURI().toURL().getPath() + "!/"));
                     }
+                } else {
+                    logger.info(dir.getAbsolutePath() + " is not a directory");
                 }
             }
 
@@ -1355,7 +1359,7 @@ public class AccessibilityPanel extends ComponentBase
     }
 
     private void showSuccesWindow() {
-        UnoAwtUtils.showInfoMessageBox(docWindowPeer, "Congradulations","Your document is 100% accessible!");
+        UnoAwtUtils.showInfoMessageBox(docWindowPeer, "Congradulations", "No accessibility issues were found.");
     }
 
     //XToolPanel
@@ -1375,5 +1379,23 @@ public class AccessibilityPanel extends ComponentBase
         // TODO: the following is wrong, since it doesn't respect i_rParentAccessible. In a real extension, you should
         // implement this correctly :)
         return (XAccessible)UnoRuntime.queryInterface(XAccessible.class, getWindow());
+    }
+
+    private static String unoURLtoURL(String unoURL) {
+        try {
+            if (System.getProperty("os.name").contains("Windows")) {
+                unoURL = unoURL.substring(6);
+            } else {
+                if (unoURL.startsWith("file://localhost")) {
+                    unoURL = unoURL.replaceFirst("file://localhost", "");
+                } else {
+                    unoURL = unoURL.substring(7);
+                }
+            }
+            return URLDecoder.decode(unoURL, "UTF-8");
+
+        } catch (UnsupportedEncodingException e) {
+            return null;
+        }
     }
 }

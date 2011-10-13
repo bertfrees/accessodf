@@ -1,13 +1,14 @@
 package be.docarch.accessibility.ooo;
 
+import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Checker;
 import be.docarch.accessibility.Provider;
 import java.util.Collection;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.ServiceLoader;
-
-import com.sun.star.lang.IllegalArgumentException;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 
 /**
  *
@@ -15,6 +16,7 @@ import com.sun.star.lang.IllegalArgumentException;
  */
 public class CheckerProvider implements Provider<Checker> {
 
+    private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
     private final Map<String,Checker> checkers;
 
     public CheckerProvider(ClassLoader classLoader,
@@ -24,13 +26,15 @@ public class CheckerProvider implements Provider<Checker> {
 
         for (Checker checker : ServiceLoader.load(Checker.class, classLoader)) {
             checkers.put(checker.getIdentifier(), checker);
+            logger.info(checker.getIdentifier() + " loaded!");
         }
 
         try {
             Checker mainChecker = new MainChecker(document);
             checkers.put(mainChecker.getIdentifier(), mainChecker);
-        } catch (IllegalArgumentException e) {
-        } catch (com.sun.star.uno.Exception e) {
+            logger.info(mainChecker.getIdentifier() + " loaded!");
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, null, e);
         }
     }
 

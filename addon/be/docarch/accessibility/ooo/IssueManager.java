@@ -120,7 +120,7 @@ public class IssueManager {
 
         for (Checker checker : checkers.list()) {
             if (checker instanceof RemoteRunnableChecker) {
-                if (!settings.brailleChecks() && checker.getIdentifier().startsWith("be.docarch.odt2braille")) {
+                if (!settings.brailleChecks() && checker.getIdentifier().equals("http://docarch.be/odt2braille/checker/BrailleChecker")) {
                     break;
                 }
                 if (odtFile == null) {
