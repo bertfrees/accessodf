@@ -15,30 +15,33 @@ import com.sun.star.lang.IllegalArgumentException;
  */
 public class Table extends FocusableElement {
 
+    private final Document doc;
     private final XTextTable xTextTable;
     private final XNamed xNamed;
 
-    public Table(String name)
+    public Table(String name,
+                 Document doc)
           throws Exception {
 
-        if (name != null) {
-            Object o = tables.getByName(name);
+        if (name == null || doc == null) { throw new IllegalArgumentException(); }
+        this.doc = doc;
+        try {
+            Object o = doc.tables.getByName(name);
             xTextTable = (XTextTable)UnoRuntime.queryInterface(XTextTable.class, o);
             xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, xTextTable);
-            return;
+        } catch (Exception e) {
+            throw new Exception("No table found with name " + name);
         }
-        throw new Exception();
     }
 
-    public Table(XTextTable xTextTable)
-          throws Exception {
+    public Table(XTextTable xTextTable,
+                 Document doc)
+          throws IllegalArgumentException {
 
-        if (xTextTable != null) {
-            this.xTextTable = xTextTable;
-            xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, xTextTable);
-            return;
-        }
-        throw new Exception();
+        if (xTextTable == null || doc == null) { throw new IllegalArgumentException(); }
+        this.doc = doc;
+        this.xTextTable = xTextTable;
+        xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, xTextTable);
     }
 
     public XTextTable getXTextTable() {
@@ -76,13 +79,13 @@ public class Table extends FocusableElement {
         try {
             if (xTextTable != null) {
                 String[] cellNames = xTextTable.getCellNames();
-                viewCursor.gotoRange((XTextRange)UnoRuntime.queryInterface(
+                doc.viewCursor.gotoRange((XTextRange)UnoRuntime.queryInterface(
                                       XTextRange.class, xTextTable.getCellByName(cellNames[cellNames.length - 1])), false);
                 if (cellNames.length > 1) {
                     XCellRange cellRange = (XCellRange)UnoRuntime.queryInterface(XCellRange.class, xTextTable);
                     XTextTableCursor cursor = xTextTable.createCursorByCellName(cellNames[0]);
                     cursor.gotoCellByName(cellNames[cellNames.length - 1], true);
-                    selectionSupplier.select(cellRange.getCellRangeByName(cursor.getRangeName()));
+                    doc.selectionSupplier.select(cellRange.getCellRangeByName(cursor.getRangeName()));
                 }
                 return true;
             }

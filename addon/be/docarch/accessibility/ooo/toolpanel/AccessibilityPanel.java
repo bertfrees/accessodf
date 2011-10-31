@@ -496,8 +496,8 @@ public class AccessibilityPanel extends ComponentBase
             imageDir = xPkgInfo.getPackageLocation("be.docarch.accessibility.ooo.accessibilitycheckeraddon") + "/images";
             document = new Document(xContext);
 
-            FocusableElement.initialise(document);
-            RDFClass.initialize(document);
+//            FocusableElement.initialise(document);
+//            RDFClass.initialize(document);
 
             // Find & load plugin Checkers & Repairers
 
@@ -856,7 +856,7 @@ public class AccessibilityPanel extends ComponentBase
         }
 
         ignoreButtonProperties.setPropertyValue("Enabled", ignorable);
-        repairButtonProperties.setPropertyValue("Enabled", repairable);
+        repairButtonProperties.setPropertyValue("Enabled", repairable && !document.isReadOnly());
       //helpButtonProperties.setPropertyValue("HelpURL", getHelpURL(selectedCheck));
       //helpButtonProperties.setPropertyValue("Enabled", false);
     }

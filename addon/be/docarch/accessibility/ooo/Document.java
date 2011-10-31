@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.uno.UnoRuntime;
+import com.sun.star.uno.AnyConverter;
 import com.sun.star.util.XModifiable;
 import com.sun.star.lang.XMultiComponentFactory;
 import com.sun.star.lang.XComponent;
@@ -29,6 +30,12 @@ import com.sun.star.text.XTextContent;
 import com.sun.star.text.XTextFramesSupplier;
 import com.sun.star.text.XTextFrame;
 import com.sun.star.text.XTextTable;
+import com.sun.star.text.XTextTablesSupplier;
+import com.sun.star.text.XTextGraphicObjectsSupplier;
+import com.sun.star.text.XTextEmbeddedObjectsSupplier;
+import com.sun.star.text.XTextViewCursor;
+import com.sun.star.text.XTextViewCursorSupplier;
+import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.style.XStyleFamiliesSupplier;
 import com.sun.star.rdf.XDocumentMetadataAccess;
 import com.sun.star.rdf.XRepository;
@@ -68,6 +75,11 @@ public class Document {
     public XComponent doc = null;
     public XNameContainer paragraphStyles = null;
     public XNameContainer characterStyles = null;
+    public XNameAccess tables = null;
+    public XNameAccess embeddedObjects = null;
+    public XNameAccess graphicObjects = null;
+    public XSelectionSupplier selectionSupplier = null;
+    public XTextViewCursor viewCursor = null;
     public XDocumentProperties docProperties = null;
     public XPropertySet docPropertySet = null;
     public XURI metaFolderURI = null;
@@ -78,6 +90,7 @@ public class Document {
     private XStorable storable = null;
     private XModifiable xModifiable = null;    
     private XTextContent firstParagraph = null;
+    private boolean readOnly = false;
 
 
     public Document(XComponentContext xContext)
@@ -142,6 +155,26 @@ public class Document {
                            XNameContainer.class, xFamilies.getByName("ParagraphStyles"));
         characterStyles = (XNameContainer)UnoRuntime.queryInterface(
                            XNameContainer.class, xFamilies.getByName("CharacterStyles"));
+        XTextTablesSupplier tablesSupplier =
+            (XTextTablesSupplier)UnoRuntime.queryInterface(
+                XTextTablesSupplier.class, doc);
+        tables = tablesSupplier.getTextTables();
+        XTextGraphicObjectsSupplier textGraphicObjectsSupplier =
+            (XTextGraphicObjectsSupplier)UnoRuntime.queryInterface(
+                XTextGraphicObjectsSupplier.class, doc);
+        XTextEmbeddedObjectsSupplier textEmbeddedObjectsSupplier =
+            (XTextEmbeddedObjectsSupplier)UnoRuntime.queryInterface(
+                XTextEmbeddedObjectsSupplier.class, doc);
+        embeddedObjects = textEmbeddedObjectsSupplier.getEmbeddedObjects();
+        graphicObjects = textGraphicObjectsSupplier.getGraphicObjects();
+
+        selectionSupplier = (XSelectionSupplier)UnoRuntime.queryInterface(
+                             XSelectionSupplier.class, xModel.getCurrentController());
+        XTextViewCursorSupplier xViewCursorSupplier =
+            (XTextViewCursorSupplier)UnoRuntime.queryInterface(
+                XTextViewCursorSupplier.class, xModel.getCurrentController());
+        viewCursor = xViewCursorSupplier.getViewCursor();
+
         XDocumentPropertiesSupplier xDocPropSuppl = (XDocumentPropertiesSupplier) UnoRuntime.queryInterface(
 						     XDocumentPropertiesSupplier.class, textDocument);
         docProperties = xDocPropSuppl.getDocumentProperties();
@@ -156,6 +189,12 @@ public class Document {
         conversionProperties[0].Value = "writer8";
         storable = (XStorable) UnoRuntime.queryInterface(XStorable.class, xModel);
 
+        for (PropertyValue prop: xModel.getArgs()) {
+            if (prop.Name.equals("ReadOnly")) {
+                readOnly = (Boolean)AnyConverter.toBoolean(prop.Value);
+                break;
+            }
+        }
     }
 
     public void storeToFile(File output)
@@ -300,5 +339,9 @@ public class Document {
         } catch (PropertyVetoException e) {
             // read-only document
         }
+    }
+
+    public boolean isReadOnly() {
+        return readOnly;
     }
 }

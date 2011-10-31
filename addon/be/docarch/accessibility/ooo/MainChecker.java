@@ -34,16 +34,13 @@ import com.sun.star.text.XTextContent;
 import com.sun.star.text.XTextTable;
 import com.sun.star.text.XTextCursor;
 import com.sun.star.text.XPageCursor;
-import com.sun.star.text.XTextViewCursor;
 import com.sun.star.text.XWordCursor;
-import com.sun.star.text.XTextViewCursorSupplier;
 import com.sun.star.text.TextContentAnchorType;
 import com.sun.star.table.XCell;
 import com.sun.star.table.XTableRows;
 import com.sun.star.table.XTableColumns;
 import com.sun.star.awt.FontUnderline;
 import com.sun.star.awt.FontSlant;
-import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.style.ParagraphAdjust;
 import com.sun.star.style.XStyle;
 import com.sun.star.rdf.XURI;
@@ -64,6 +61,7 @@ import com.sun.star.rdf.RepositoryException;
 
 import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Check;
+import be.docarch.accessibility.DummyCheck;
 import be.docarch.accessibility.Issue;
 import be.docarch.accessibility.RunnableChecker;
 
@@ -81,20 +79,20 @@ public class MainChecker implements RunnableChecker {
     private final Settings settings;
     private final Collection<String> fakeFonts;
     private final XLanguageGuessing languageGuesser;
-    private final XSelectionSupplier selectionSupplier;
     private final Map<String,Check> checks;
+    private final Check dummyCheck = new DummyCheck();
     
     private boolean daisyChecks = false;
     private Collection<String> metadata = null;
     private int numberOfTitles = 0;
     private int numberOfHeadings = 0;
-    private XTextViewCursor viewCursor = null;
     private XPageCursor pageCursor = null;
     private String reportName = null;
     private Locale docLocale = null;
     private Map<XTextRange,XTextContent> textMetaMap;
     private Collection<Issue> detectedIssues;
     private Map<Check,Integer> detectedChecks;
+    private Date date = new Date();
 
     public MainChecker(Document document)
                 throws IllegalArgumentException,
@@ -108,6 +106,7 @@ public class MainChecker implements RunnableChecker {
         detectedIssues = new ArrayList<Issue>();
         detectedChecks = new HashMap<Check,Integer>();
         checks = new HashMap<String,Check>();
+        checks.put(dummyCheck.getIdentifier(), dummyCheck);
 
         for (GeneralCheck.ID id : GeneralCheck.ID.values()) {
             checks.put(id.name(), new GeneralCheck(id));
@@ -133,9 +132,6 @@ public class MainChecker implements RunnableChecker {
         languageGuesser = (XLanguageGuessing)UnoRuntime.queryInterface(
                            XLanguageGuessing.class, document.xMCF.createInstanceWithContext(
                            "com.sun.star.linguistic2.LanguageGuessing", document.xContext));
-
-        selectionSupplier = (XSelectionSupplier)UnoRuntime.queryInterface(
-                             XSelectionSupplier.class, document.xModel.getCurrentController());
     }
 
     public String getIdentifier() {
@@ -155,23 +151,11 @@ public class MainChecker implements RunnableChecker {
         return getIdentifier();
     }
 
- /* public Date getLastCheckDate() {
-
-        try {
-            if (lastChecked != null) {
-                return dateFormat.parse(dateFormat.format(lastChecked));
-            } else {
-                return null;
-            }
-        } catch (java.text.ParseException ex) {
-            return null;
-        }
-    } */
-
     public boolean run(){
 
       //document.removeAccessibilityData(getIdentifier());
 
+        date = new Date();
         reportName = MainChecker.class.getCanonicalName()
                         + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(new Date()) + ".rdf";
 
@@ -197,7 +181,11 @@ public class MainChecker implements RunnableChecker {
             }
 
             XNamedGraph graph = document.xRepository.getGraph(graphURI);
-            Assertions assertions = new Assertions(graph);
+            Assertions assertions = new Assertions(graph, document);
+            if (detectedIssues.isEmpty()) {
+                // Create dummy assertion to indicate that the document is validated
+                assertions.create(new Issue(null, dummyCheck, this, date)).write();
+            }
             for (Issue i : detectedIssues) {
                 if (detectedChecks.get(i.getCheck()) <= 10) {
                     assertions.create(i).write();
@@ -205,7 +193,7 @@ public class MainChecker implements RunnableChecker {
             }
             for (Check c : detectedChecks.keySet()) {
                 if (detectedChecks.get(c) > 10) {
-                    assertions.create(new Issue(null, c, this, detectedChecks.get(c))).write();
+                    assertions.create(new Issue(null, c, this, date, detectedChecks.get(c))).write();
                 }
             }
 
@@ -229,11 +217,8 @@ public class MainChecker implements RunnableChecker {
                                            com.sun.star.uno.Exception,
                                            Exception {
 
-        selectionSupplier.select(document.getFirstParagraph().getAnchor());
-        XTextViewCursorSupplier xViewCursorSupplier = (XTextViewCursorSupplier)UnoRuntime.queryInterface(
-                                                       XTextViewCursorSupplier.class, document.xModel.getCurrentController());
-        viewCursor = xViewCursorSupplier.getViewCursor();
-        pageCursor = (XPageCursor)UnoRuntime.queryInterface(XPageCursor.class, viewCursor);
+        document.selectionSupplier.select(document.getFirstParagraph().getAnchor());
+        pageCursor = (XPageCursor)UnoRuntime.queryInterface(XPageCursor.class, document.viewCursor);
 
         metadata = new ArrayList<String>();
         numberOfTitles = 0;
@@ -390,7 +375,7 @@ public class MainChecker implements RunnableChecker {
               //numberingStyleName = AnyConverter.toString(properties.getPropertyValue("NumberingStyleName"));
 
                 if (caption != null && captionAfterTable && bigTable) {
-                    addIssue(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent),
+                    addIssue(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent, document),
                                                  get(GeneralCheck.ID.A_CaptionBelowBigTable.name()),
                                                  this));
                 }
@@ -467,7 +452,7 @@ public class MainChecker implements RunnableChecker {
 
                     if (caption != null && afterTable && bigTable) {
                         if (keepWithTableBefore || !keepWithNext) {                            
-                            addIssue(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent),
+                            addIssue(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent, document),
                                                          get(GeneralCheck.ID.A_CaptionBelowBigTable.name()),
                                                          this));
                             caption = null;
@@ -511,7 +496,7 @@ public class MainChecker implements RunnableChecker {
                 }
 
                 if (metadata.size() > 0) {
-                    be.docarch.accessibility.ooo.Paragraph p = new be.docarch.accessibility.ooo.Paragraph(textContent);
+                    be.docarch.accessibility.ooo.Paragraph p = new be.docarch.accessibility.ooo.Paragraph(textContent, document);
                     for (String id : metadata) {
                         addIssue(new Issue(p, get(id), this));
                     }
@@ -532,7 +517,7 @@ public class MainChecker implements RunnableChecker {
         }
 
         if (caption != null && captionAfterTable) {
-            addIssue(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent),
+            addIssue(new Issue(new be.docarch.accessibility.ooo.Paragraph(textContent, document),
                                          get(GeneralCheck.ID.A_CaptionBelowBigTable.name()),
                                          this));
         }
@@ -544,10 +529,10 @@ public class MainChecker implements RunnableChecker {
 
             if (inTable) {
                 int[] pageRange = new int[2];
-                viewCursor.gotoRange(cursor, false);
+                document.viewCursor.gotoRange(cursor, false);
                 pageRange[0] = pageCursor.getPage();
                 cursor.gotoEnd(false);
-                viewCursor.gotoRange(cursor, false);
+                document.viewCursor.gotoRange(cursor, false);
                 pageRange[1] = pageCursor.getPage();
                 return pageRange;
             }
@@ -615,6 +600,9 @@ public class MainChecker implements RunnableChecker {
             underline = AnyConverter.toShort(properties.getPropertyValue("CharUnderline"));
             italic = (FontSlant)AnyConverter.toObject(FontSlant.class, properties.getPropertyValue("CharPosture"));
             flash = AnyConverter.toBoolean(properties.getPropertyValue("CharFlash"));
+
+            // Mac OS: "Apple AWT Java VM was loaded on first thread -- can't start AWT" (https://issues.apache.org/ooo/show_bug.cgi?id=47888)
+
             Color charColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("CharColor")));
             Color charBackColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("CharBackColor")));
             Color paraBackColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("ParaBackColor")));
@@ -892,7 +880,7 @@ public class MainChecker implements RunnableChecker {
         }
 
         if (metadata.size() > 0) {
-            be.docarch.accessibility.ooo.Table t = new be.docarch.accessibility.ooo.Table(table);
+            be.docarch.accessibility.ooo.Table t = new be.docarch.accessibility.ooo.Table(table, document);
             for (String id : metadata) {
                 addIssue(new Issue(t, get(id), this));
             }
@@ -1011,7 +999,7 @@ public class MainChecker implements RunnableChecker {
 
             if (graphicMetadata.size() > 0) {
                 XNamed namedGraphic = (XNamed)UnoRuntime.queryInterface(XNamed.class, graphicObject);
-                DrawObject o = new DrawObject(namedGraphic);
+                DrawObject o = new DrawObject(namedGraphic, document);
                 for (String id : graphicMetadata) {
                     addIssue(new Issue(o, get(id), this));
                 }
@@ -1044,7 +1032,7 @@ public class MainChecker implements RunnableChecker {
 
             if (title.length() == 0) {
                 XNamed namedObject = (XNamed)UnoRuntime.queryInterface(XNamed.class, embeddedObject);
-                DrawObject o = new DrawObject(namedObject);
+                DrawObject o = new DrawObject(namedObject, document);
                 if (AnyConverter.toString(properties.getPropertyValue("CLSID")).equals("078B7ABA-54FC-457F-8551-6147e776a997")) {
                     addIssue(new Issue(o, get(GeneralCheck.ID.A_FormulaWithoutAlt.name()), this));
                 } else {
@@ -1064,7 +1052,7 @@ public class MainChecker implements RunnableChecker {
 
         XTextContent start = getTextMeta(span.getStartPoint());
         XTextContent end = getTextMeta(span.getEndPoint());
-        addIssue(new Issue(new be.docarch.accessibility.ooo.Span(start, end), get(id), this));
+        addIssue(new Issue(new be.docarch.accessibility.ooo.Span(start, end, document), get(id), this));
     }
 
     private void addIssue(Issue issue) {

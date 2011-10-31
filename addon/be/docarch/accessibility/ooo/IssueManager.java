@@ -1,7 +1,6 @@
 package be.docarch.accessibility.ooo;
 
 import java.io.File;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +31,7 @@ import com.sun.star.beans.UnknownPropertyException;
 import com.sun.star.beans.PropertyVetoException;
 
 import be.docarch.accessibility.Check;
+import be.docarch.accessibility.DummyCheck;
 import be.docarch.accessibility.Checker;
 import be.docarch.accessibility.Provider;
 import be.docarch.accessibility.RunnableChecker;
@@ -201,32 +201,11 @@ public class IssueManager {
             checkerDates.put(checker.getIdentifier(), longAgo);
         }
 
-        for (XNamedGraph graph : accessibilityDataGraphs) {
-            XEnumeration assertorEnum = graph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTOR);
-            if (assertorEnum.hasMoreElements()) {
-                XURI assertor = URI.create(document.xContext, ((Statement)assertorEnum.nextElement()).Subject.getStringValue());
-                Checker checker = checkers.get(assertor.getStringValue());
-                if (checker != null) {
-                    XEnumeration timestamps = graph.getStatements(assertor, URIs.DCT_DATE, null);
-                    if (timestamps.hasMoreElements()) {
-                        try {
-                            Date date = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ").parse(((Statement)timestamps.nextElement()).Object.getStringValue());
-                            if (date.after(checkerDates.get(checker.getIdentifier()))) {
-                                checkerDates.put(checker.getIdentifier(), date);
-                            }
-                        } catch (ParseException ex) {
-                            logger.info("No check date specified for checker");
-                        }
-                    }
-                }
-            }
-        }
-
         allIssues.clear();
 
         Issue issue, sameIssue;
         for (XNamedGraph graph : accessibilityDataGraphs) {
-            Assertions assertions = new Assertions(graph);
+            Assertions assertions = new Assertions(graph, document);
             XEnumeration assertionEnum = graph.getStatements(null, URIs.RDF_TYPE, URIs.EARL_ASSERTION);
             XResource assertion = null;
             while (assertionEnum.hasMoreElements()) {
@@ -236,6 +215,10 @@ public class IssueManager {
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, null, e);
                     continue;
+                }
+                if (issue.getCheck() instanceof DummyCheck) {
+                    checkerDates.put(issue.getChecker().getIdentifier(), issue.getCheckDate());
+                    break;
                 }
                 if (allIssues.contains(issue)) {
                     sameIssue = allIssues.remove(allIssues.indexOf(issue));
@@ -253,6 +236,13 @@ public class IssueManager {
                     }
                 }
                 allIssues.add(issue);
+            }
+        }
+
+        for (Issue i : allIssues) {
+            String checker = i.getChecker().getIdentifier();
+            if (i.getCheckDate().after(checkerDates.get(checker))) {
+                checkerDates.put(checker, i.getCheckDate());
             }
         }
 

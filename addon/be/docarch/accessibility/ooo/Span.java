@@ -14,6 +14,7 @@ public class Span extends FocusableElement {
 
     private final XTextContent startXTextContent;
     private final XTextContent endXTextContent;
+    private final Document doc;
 
     private final XMetadatable startXMetadatable;
     private final XMetadatable endXMetadatable;
@@ -25,60 +26,55 @@ public class Span extends FocusableElement {
     private String sample = "";
 
     public Span(XTextContent start,
-                XTextContent end)
+                XTextContent end,
+                Document doc)
          throws Exception {
 
-        if (start != null && end!= null) {
-            startXTextContent = start;
-            endXTextContent = end;
-            startXMetadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, startXTextContent);
-            endXMetadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, endXTextContent);
-            if (startXMetadatable != null && endXMetadatable != null) {
-                startXMetadatable.ensureMetadataReference();
-                endXMetadatable.ensureMetadataReference();
-                init();
-                return;
-            }
-        }
-        throw new Exception();
+        if (start == null || end == null || doc == null) { throw new IllegalArgumentException(); }
+        this.doc = doc;
+        startXTextContent = start;
+        endXTextContent = end;
+        startXMetadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, startXTextContent);
+        endXMetadatable = (XMetadatable)UnoRuntime.queryInterface(XMetadatable.class, endXTextContent);
+        if (startXMetadatable == null  || endXMetadatable == null) { throw new Exception("Cannot cast to XMetadatable"); }
+        startXMetadatable.ensureMetadataReference();
+        endXMetadatable.ensureMetadataReference();
+        init();
     }
 
     public Span(XMetadatable start,
-                XMetadatable end)
+                XMetadatable end,
+                Document doc)
          throws Exception {
 
-         if (start != null && end != null) {
-            startXMetadatable = start;
-            endXMetadatable = end;
-            startXMetadatable.ensureMetadataReference();
-            endXMetadatable.ensureMetadataReference();
-            startXTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, startXMetadatable);
-            endXTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, endXMetadatable);
-            if (startXTextContent != null && endXTextContent != null) {
-                init();
-                return;
-            }
-        }
-        throw new Exception();
+        if (start == null || end == null || doc == null) { throw new IllegalArgumentException(); }
+        this.doc = doc;
+        startXMetadatable = start;
+        endXMetadatable = end;
+        startXMetadatable.ensureMetadataReference();
+        endXMetadatable.ensureMetadataReference();
+        startXTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, startXMetadatable);
+        endXTextContent = (XTextContent)UnoRuntime.queryInterface(XTextContent.class, endXMetadatable);
+        if (startXTextContent == null || endXTextContent == null) { throw new Exception("Cannot cast to XTextContent"); }
+        init();
     }
 
     private void init() throws Exception {
 
         startId = startXMetadatable.getMetadataReference().Second;
         endId = endXMetadatable.getMetadataReference().Second;
-        if (((XServiceInfo)UnoRuntime.queryInterface(
-                  XServiceInfo.class, startXTextContent)).supportsService("com.sun.star.text.InContentMetadata") &&
-                ((XServiceInfo)UnoRuntime.queryInterface(
-                  XServiceInfo.class, endXTextContent)).supportsService("com.sun.star.text.InContentMetadata")) {
-            cursor = startXTextContent.getAnchor().getEnd().getText().createTextCursorByRange(startXTextContent.getAnchor().getEnd());
-            cursor.gotoRange(endXTextContent.getAnchor().getStart(), true);
-            sample = cursor.getString();
-            if (sample.length() > 30) {
-                sample = sample.substring(0, 30) + "\u2026";
-            }
-            return;
+        if (!((XServiceInfo)UnoRuntime.queryInterface(
+               XServiceInfo.class, startXTextContent)).supportsService("com.sun.star.text.InContentMetadata") ||
+            !((XServiceInfo)UnoRuntime.queryInterface(
+               XServiceInfo.class, endXTextContent)).supportsService("com.sun.star.text.InContentMetadata")) {
+            throw new Exception("Does not support service com.sun.star.text.InContentMetadata");
         }
-        throw new Exception();
+        cursor = startXTextContent.getAnchor().getEnd().getText().createTextCursorByRange(startXTextContent.getAnchor().getEnd());
+        cursor.gotoRange(endXTextContent.getAnchor().getStart(), true);
+        sample = cursor.getString();
+        if (sample.length() > 30) {
+            sample = sample.substring(0, 30) + "\u2026";
+        }
 
     }
 
@@ -121,7 +117,7 @@ public class Span extends FocusableElement {
     public boolean focus() {
 
         if (cursor != null) {
-            viewCursor.gotoRange(cursor, false);
+            doc.viewCursor.gotoRange(cursor, false);
             return true;
         }
         return false;

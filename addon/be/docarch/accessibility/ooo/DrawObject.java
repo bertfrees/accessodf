@@ -12,37 +12,35 @@ import com.sun.star.lang.IllegalArgumentException;
  */
 public class DrawObject extends FocusableElement {
 
+    private final Document doc;
     private XNamed xNamed = null;
 
-    public DrawObject(String name)
+    public DrawObject(String name,
+                      Document doc)
                throws Exception {
 
-        if (name != null) {
-            Object o = null;
+        if (name == null || doc == null) { throw new IllegalArgumentException(); }
+        this.doc = doc;
+        Object o = null;
+        try {
+            o = doc.embeddedObjects.getByName(name);
+        } catch (NoSuchElementException e) {
             try {
-                o = embeddedObjects.getByName(name);
-            } catch (NoSuchElementException e) {
-                try {
-                    o = graphicObjects.getByName(name);
-                } catch (NoSuchElementException ee) {
-                }
-            }
-            if (o != null) {
-                xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, o);
-                return;
+                o = doc.graphicObjects.getByName(name);
+            } catch (NoSuchElementException ee) {
             }
         }
-        throw new Exception();
+        if (o == null) { throw new Exception("No object found with name " + name); }
+        xNamed = (XNamed)UnoRuntime.queryInterface(XNamed.class, o);
     }
 
-    public DrawObject(XNamed xNamed)
-               throws Exception {
+    public DrawObject(XNamed xNamed,
+                      Document doc)
+               throws IllegalArgumentException {
 
-        if (xNamed != null) {
-            this.xNamed = xNamed;
-            return;
-        }
-        throw new Exception();
+        if (xNamed == null || doc == null) { throw new IllegalArgumentException(); }
+        this.doc = doc;
+        this.xNamed = xNamed;
     }
 
     public XNamed getXNamed() {
@@ -75,7 +73,7 @@ public class DrawObject extends FocusableElement {
 
         try {
             if (xNamed != null) {
-                return selectionSupplier.select(xNamed);
+                return doc.selectionSupplier.select(xNamed);
             }
         } catch (IllegalArgumentException e) {
         }

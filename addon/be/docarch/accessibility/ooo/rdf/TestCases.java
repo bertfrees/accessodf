@@ -12,20 +12,24 @@ import be.docarch.accessibility.Check;
 import be.docarch.accessibility.Constants;
 import be.docarch.accessibility.Provider;
 import be.docarch.accessibility.ooo.URIs;
+import be.docarch.accessibility.ooo.Document;
 
 /**
  *
  * @author Bert Frees
  */
-public class TestCases extends RDFClass {
+public class TestCases {
 
     private final XNamedGraph graph;
+    private final Document doc;
 
     private Map<String,TestCase> xURIMap = new TreeMap<String,TestCase>();
     private Map<Check,TestCase> checkMap = new HashMap<Check,TestCase>();
 
-    public TestCases(XNamedGraph graph) {
+    public TestCases(XNamedGraph graph,
+                     Document doc) {
         this.graph = graph;
+        this.doc = doc;
     }
 
     public TestCase create(Check check) {
@@ -43,16 +47,12 @@ public class TestCases extends RDFClass {
 
         TestCase tc = xURIMap.get(testcase.getStringValue());
         if (tc == null) {
-            if (graph.getStatements(testcase, URIs.RDF_TYPE, URIs.EARL_TESTCASE).hasMoreElements()) {
-                if (testcase.getNamespace().equals(Constants.A11Y_CHECKS)) {
-                    Check check = checks.get(testcase.getLocalName());
-                    if (check != null) {
-                        tc = new TestCase(check, testcase);
-                    }
-                }
-            }
+            if (!graph.getStatements(testcase, URIs.RDF_TYPE, URIs.EARL_TESTCASE).hasMoreElements()) { throw new Exception("Not of type earl:TestCase"); }
+            if (!testcase.getNamespace().equals(Constants.A11Y_CHECKS)) { throw new Exception("Invalid namespace for check"); }
+            Check check = checks.get(testcase.getLocalName());
+            if (check == null) { throw new Exception("Check ID not found"); }
+            tc = new TestCase(check, testcase);
         }
-        if (tc == null) { throw new Exception(); }
         xURIMap.put(testcase.getStringValue(), tc);
         return tc;
     }
@@ -80,7 +80,7 @@ public class TestCases extends RDFClass {
         public XURI write() throws Exception {
 
             if (testcase == null) {
-                testcase = URI.createNS(xContext, Constants.A11Y_CHECKS, check.getIdentifier());
+                testcase = URI.createNS(doc.xContext, Constants.A11Y_CHECKS, check.getIdentifier());
                 graph.addStatement(testcase, URIs.RDF_TYPE, URIs.EARL_TESTCASE);
             }
             return testcase;
