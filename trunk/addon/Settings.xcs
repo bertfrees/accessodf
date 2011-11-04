@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- oor:name must be identical to the filename of this xcs file //-->
+<oor:component-schema xmlns:oor="http://openoffice.org/2001/registry"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  oor:name="Settings"
+  oor:package="be.docarch.accessodf.ooo.optionspage" xml:lang="en-US">
+  <info>
+    <author></author>
+    <desc></desc>
+  </info>
+  <component>
+    <group oor:name="Leaves">
+      <group oor:name="accessibilityChecks" oor:type="Leaf">
+        <prop oor:name="brailleChecks" oor:type="xs:short">
+          <value>1</value>
+        </prop>
+        <prop oor:name="daisyChecks" oor:type="xs:short">
+          <value>1</value>
+        </prop>
+      </group>
+    </group>
+  </component>
+</oor:component-schema>
