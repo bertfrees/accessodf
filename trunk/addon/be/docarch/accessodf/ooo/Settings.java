@@ -26,7 +26,7 @@ public class Settings {
     public Settings(XComponentContext context) {
 
         accessLeaves = ConfigurationAccess.createUpdateAccess(context,
-                        "/be.docarch.accessibility.ooo.optionspage.Settings/Leaves");
+                        "/be.docarch.accessodf.ooo.optionspage.Settings/Leaves");
         try {
             xLeaf = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, accessLeaves.getByName("accessibilityChecks"));
         } catch (com.sun.star.container.NoSuchElementException e) {

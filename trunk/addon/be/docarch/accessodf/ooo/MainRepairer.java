@@ -73,7 +73,7 @@ public class MainRepairer implements Repairer {
     }
 
     public String getIdentifier() {
-        return "be.docarch.accessibility.ooo.InternalRepairer";
+        return "be.docarch.accessodf.ooo.InternalRepairer";
     }
 
     public boolean repair(Issue issue) {

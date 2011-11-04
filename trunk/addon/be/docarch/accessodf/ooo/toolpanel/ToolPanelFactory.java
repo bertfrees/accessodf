@@ -69,7 +69,7 @@ public class ToolPanelFactory  {
 
             logger.entering("_ToolPanelFactory", "createUIElement");
 
-            if (!i_rResourceURL.startsWith("private:resource/toolpanel/be.docarch.accessibility.ooo.toolpanel")) {
+            if (!i_rResourceURL.startsWith("private:resource/toolpanel/be.docarch.accessodf.ooo.toolpanel")) {
                 throw new NoSuchElementException(i_rResourceURL, this);
             }
 

@@ -1,12 +1,6 @@
 package be.docarch.accessodf.ooo.toolpanel;
 
-import be.docarch.accessodf.Repairer;
-import be.docarch.accessodf.Checker;
-import be.docarch.accessodf.Provider;
-import be.docarch.accessodf.Element;
-import be.docarch.accessodf.Constants;
-import be.docarch.accessodf.Issue;
-import be.docarch.accessodf.Check;
+
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import java.util.Locale;
@@ -67,7 +61,7 @@ import com.sun.star.view.XSelectionSupplier;
 import com.sun.star.view.XSelectionChangeListener;
 import com.sun.star.lib.uno.helper.ComponentBase;
 
-import be.docarch.accessibility.*;
+import be.docarch.accessodf.*;
 import be.docarch.accessodf.ooo.*;
 
 import java.io.UnsupportedEncodingException;
@@ -183,7 +177,7 @@ public class AccessibilityPanel extends ComponentBase
 
         try { oooLocale = UnoUtils.getUILocale(xContext); } catch (Exception e) {
               oooLocale = Locale.ENGLISH; }
-        ResourceBundle bundle = ResourceBundle.getBundle("be/docarch/accessibility/ooo/toolpanel/l10n/toolpanel", oooLocale);
+        ResourceBundle bundle = ResourceBundle.getBundle("be/docarch/accessodf/ooo/toolpanel/l10n/toolpanel", oooLocale);
 
         L10N_errors = bundle.getString("errors");
         L10N_warnings = bundle.getString("warnings");

@@ -87,7 +87,7 @@ public class TestSubjects {
     private Paragraph readParagraph(XResource subject) throws Exception {
 
         XEnumeration paragraphs = graph.getStatements(subject, URIs.A11Y_START, null);
-        if (!paragraphs.hasMoreElements()) { throw new Exception("No a11y:start statement"); }
+        if (!paragraphs.hasMoreElements()) { throw new Exception("No start statement"); }
         XURI paragraph = URI.create(doc.xContext, ((Statement)paragraphs.nextElement()).Object.getStringValue());
         XMetadatable metadatable = doc.xDMA.getElementByURI(paragraph);
         if (metadatable == null) { throw new Exception("Cannot find paragraph"); }
@@ -99,7 +99,7 @@ public class TestSubjects {
         XEnumeration starts = graph.getStatements(subject, URIs.A11Y_START, null);
         XEnumeration ends = graph.getStatements(subject, URIs.A11Y_END, null);
         
-        if (!starts.hasMoreElements() || !ends.hasMoreElements()) { throw new Exception("No a11y:start or a11y:end statement"); }
+        if (!starts.hasMoreElements() || !ends.hasMoreElements()) { throw new Exception("No start or end statement"); }
         XURI start = URI.create(doc.xContext, ((Statement)starts.nextElement()).Object.getStringValue());
         XURI end = URI.create(doc.xContext, ((Statement)ends.nextElement()).Object.getStringValue());
         XMetadatable startElement = doc.xDMA.getElementByURI(start);

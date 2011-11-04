@@ -12,7 +12,7 @@
               <value>be.docarch.accessodf.ooo.AccessODFAddOn</value>
             </prop>
             <prop oor:name="Label">
-              <value xml:lang="en-US">Accessibility Checker</value>
+              <value xml:lang="en-US">AccessODF</value>
             </prop>
             <prop oor:name="OptionsPage">
               <value>%origin%/../../../../../dialogs/OptionsPage.xdl</value>

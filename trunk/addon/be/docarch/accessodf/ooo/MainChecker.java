@@ -135,7 +135,7 @@ public class MainChecker implements RunnableChecker {
     }
 
     public String getIdentifier() {
-        return "http://docarch.be/accessibility/ooo/InternalChecker";
+        return "http://docarch.be/accessodf/ooo/InternalChecker";
     }
 
     public Collection<Check> list() {
@@ -1065,7 +1065,7 @@ public class MainChecker implements RunnableChecker {
 
     // TODO: in aparte klassen zetten
 
-    private class Paragraph { // TODO: samenvoegen met be.docarch.accessibility.ooo.Paragraph
+    private class Paragraph { // TODO: samenvoegen met be.docarch.accessodf.ooo.Paragraph
 
         private final XTextRange startPoint;
         private final XTextRange endPoint;
@@ -1135,7 +1135,7 @@ public class MainChecker implements RunnableChecker {
         }
     }
 
-    private class Span { // TODO: samenvoegen met be.docarch.accessibility.ooo.Span ?
+    private class Span { // TODO: samenvoegen met be.docarch.accessodf.ooo.Span ?
 
         private String text;
         private XTextRange startPoint;

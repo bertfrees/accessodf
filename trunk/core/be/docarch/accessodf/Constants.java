@@ -9,10 +9,10 @@ import java.io.File;
  */
 public abstract class Constants {
 
-    public static final String LOGGER_NAME = "be.docarch.accessibility";
+    public static final String LOGGER_NAME = "be.docarch.accessodf";
 
-    public static final String TMP_PREFIX = "accessibility.";
-    private static final File TMP_DIRECTORY = new File(System.getProperty("java.io.tmpdir") + File.separator + "accessibility-checker");
+    public static final String TMP_PREFIX = "accessodf.";
+    private static final File TMP_DIRECTORY = new File(System.getProperty("java.io.tmpdir") + File.separator + "accessodf");
 
     public final static String BERT =  "http://www.docarch.be/bert";
 
@@ -20,7 +20,7 @@ public abstract class Constants {
     private final static String FOAF = "http://xmlns.com/foaf/0.1/";
     private final static String EARL = "http://www.w3.org/ns/earl#";
     private final static String XSD =  "http://www.w3.org/2001/XMLSchema#";
-    private final static String A11Y = "http://www.docarch.be/accessibility-checker/";
+    private final static String A11Y = "http://www.docarch.be/accessodf/";
 
     public final static String A11Y_CHECKER =        A11Y + "Checker";
     public final static String A11Y_DOCUMENT =       A11Y + "types#Document";

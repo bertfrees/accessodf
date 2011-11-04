@@ -46,7 +46,7 @@ public class DialogEventHandler
      */
     public static String[] ControlNames = {"CheckBox1", "CheckBox2"};
 
-    static private final String __serviceName = "be.docarch.accessibility.ooo.optionspage.DialogEventHandler";
+    static private final String __serviceName = "be.docarch.accessodf.ooo.optionspage.DialogEventHandler";
 
     private XComponentContext context;
     private Settings settings;

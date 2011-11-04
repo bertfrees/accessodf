@@ -47,6 +47,7 @@ public class Assertors {
         Assertor a = xURIMap.get(assertor.getStringValue());
         if (a == null) {
             if (!graph.getStatements(assertor, URIs.RDF_TYPE, URIs.EARL_ASSERTOR).hasMoreElements()) { throw new Exception("Not of type earl:Assertor"); }
+            if (!graph.getStatements(assertor, URIs.RDF_TYPE, URIs.A11Y_CHECKER).hasMoreElements()) { throw new Exception("Not of type Checker"); }
             Checker checker = checkers.get(assertor.getStringValue());
             if (checker == null) { throw new Exception("Checker ID not found"); }
             a = new Assertor(checker, assertor);
