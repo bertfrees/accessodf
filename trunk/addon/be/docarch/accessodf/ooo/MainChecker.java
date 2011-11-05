@@ -74,6 +74,7 @@ import be.docarch.accessodf.ooo.rdf.Assertions;
 public class MainChecker implements RunnableChecker {
 
     private static final Logger logger = Logger.getLogger(Constants.LOGGER_NAME);
+    private static final boolean IS_MAC_OS = System.getProperty("os.name").toLowerCase().contains("mac os");
 
     private final Document document;
     private final Settings settings;
@@ -601,14 +602,6 @@ public class MainChecker implements RunnableChecker {
             italic = (FontSlant)AnyConverter.toObject(FontSlant.class, properties.getPropertyValue("CharPosture"));
             flash = AnyConverter.toBoolean(properties.getPropertyValue("CharFlash"));
 
-            // Mac OS: "Apple AWT Java VM was loaded on first thread -- can't start AWT" (https://issues.apache.org/ooo/show_bug.cgi?id=47888)
-
-            Color charColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("CharColor")));
-            Color charBackColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("CharBackColor")));
-            Color paraBackColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("ParaBackColor")));
-            Color foreground = (charColor.getAlpha() == 0) ? Color.BLACK : charColor;
-            Color background = (charBackColor.getAlpha() == 0) ? paraBackColor : charBackColor;
-            contrast = contrastRatio(foreground, background);
             locale = (Locale)AnyConverter.toObject(Locale.class, properties.getPropertyValue("CharLocale"));
 
             try {
@@ -617,15 +610,26 @@ public class MainChecker implements RunnableChecker {
                 hyperlinkURL = "";
             }
             
-            if (contrast < 4.5d) {
-                if (lowContrastText == null) {
-                    lowContrastText = new Span(start, end, text);
-                    lowContrastTextSpans.add(lowContrastText);
+            // Mac OS: "Apple AWT Java VM was loaded on first thread -- can't start AWT" (https://issues.apache.org/ooo/show_bug.cgi?id=47888)
+			if (!IS_MAC_OS) {
+
+                Color charColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("CharColor")));
+                Color charBackColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("CharBackColor")));
+                Color paraBackColor = convertColor(AnyConverter.toInt(properties.getPropertyValue("ParaBackColor")));
+                Color foreground = (charColor.getAlpha() == 0) ? Color.BLACK : charColor;
+                Color background = (charBackColor.getAlpha() == 0) ? paraBackColor : charBackColor;
+                contrast = contrastRatio(foreground, background);
+                
+                if (contrast < 4.5d) {
+                    if (lowContrastText == null) {
+                        lowContrastText = new Span(start, end, text);
+                        lowContrastTextSpans.add(lowContrastText);
+                    } else {
+                        lowContrastText.add(end, text);
+                    }
                 } else {
-                    lowContrastText.add(end, text);
+                    lowContrastText = null;
                 }
-            } else {
-                lowContrastText = null;
             }
 
             if (fakeFonts.contains(fontName)) {
