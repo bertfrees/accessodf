@@ -16,8 +16,8 @@
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
- package be.docarch.accessodf.ooo;
+
+package be.docarch.accessodf.ooo;
 
 import com.sun.star.beans.PropertyState;
 import com.sun.star.beans.PropertyValue;

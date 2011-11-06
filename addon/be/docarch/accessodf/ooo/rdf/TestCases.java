@@ -16,8 +16,8 @@
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
- package be.docarch.accessodf.ooo.rdf;
+
+package be.docarch.accessodf.ooo.rdf;
 
 import java.util.Map;
 import java.util.TreeMap;

@@ -16,8 +16,8 @@
  *  You should have received a copy of the GNU Lesser General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
- package be.docarch.accessodf.ooo.optionspage;
+
+package be.docarch.accessodf.ooo.optionspage;
 
 import com.sun.star.awt.ItemEvent;
 import com.sun.star.lang.EventObject;
