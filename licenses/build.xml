@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="AccessODF-licenses" default="java-headers" basedir=".">
+    <description>Add license headers to all Java source files.</description>
+	
+	<target name="java-headers">
+        <loadfile property="header" srcFile="java-header.txt"/>
+        <replaceregexp match="(/\*.*\*/.*)??^package " flags="sm"
+                       replace="${header}package ">
+            <fileset dir="..">
+                <include name="core/**/*.java"/>
+                <include name="addon/**/*.java"/>
+            </fileset>
+        </replaceregexp>
+    </target>
+</project>

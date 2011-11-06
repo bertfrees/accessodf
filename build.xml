@@ -55,6 +55,11 @@
 		<ant dir="l10n" inheritAll="false" />
 	</target>
 	
+	<target name="licenses"
+			description="Add license headers">
+		<ant dir="licenses" inheritAll="false" />
+	</target>
+	
 			
 <!--
   /- ===========================================================================
