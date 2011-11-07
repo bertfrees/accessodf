@@ -4,8 +4,10 @@
     <version value="0.1.0"/>
     <!-- Identifier -->
     <identifier value="be.docarch.accessodf.ooo.accessodfaddon"/>
-    <!-- OpenOffice.org Minimal Version: TODO -->
-	
+    <!-- OpenOffice.org Minimal Version -->
+    <dependencies>
+        <OpenOffice.org-minimal-version value="3.3" name="OpenOffice.org 3.3"/>
+    </dependencies>
     <!-- Auto Update Link: TODO-->
 	
     <!-- Extension Dialog Displayed Name -->
