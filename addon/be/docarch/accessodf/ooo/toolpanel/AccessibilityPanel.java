@@ -1378,7 +1378,7 @@ public class AccessibilityPanel extends ComponentBase
     }
 
     private void showSuccesWindow() {
-        UnoAwtUtils.showInfoMessageBox(docWindowPeer, "Congradulations", "No accessibility issues were found.");
+        UnoAwtUtils.showInfoMessageBox(docWindowPeer, "Congratulations", "No accessibility issues were found.");
     }
 
     //XToolPanel
