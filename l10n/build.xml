@@ -1,34 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="odt2braille-l10n" default="l10n" basedir=".">
-    <description>Convert UTF-8 encoded properties files into ASCII encoded files.</description>
+	<description>Convert ODS spreadsheet with localisation data into ASCII encoded Java properties files.</description>
 	
 	<target name="l10n">
-	
-	    <property name="jdk.home" value="C:\Program Files (x86)\Java\jdk1.6.0_17"/>
-		<property name="native2ascii.executable" value="${jdk.home}/bin/native2ascii"/>
-	
-        <macrodef name="utf8-to-ascii">
-                <attribute name="path"/>
-        	<attribute name="dir"/>
-            <sequential>
-                <delete>
-                    <fileset dir="../@{dir}/@{path}" includes="*.properties"/>
-                </delete>
-                <apply executable="${native2ascii.executable}"
-                       dest="../@{dir}/@{path}"
-                       parallel="false">
-                    <arg value="-encoding"/>
-                    <arg value="utf-8"/>
-                    <srcfile/>
-                    <targetfile/>
-                    <fileset dir="@{path}" includes="*.utf.properties"/>
-                    <mapper type="glob" from="*.utf.properties" to="*.properties"/>
-                </apply>
-            </sequential>
-        </macrodef>
-        
-        <utf8-to-ascii path="be/docarch/accessibility/ooo/l10n" dir="addon"/>
-        <utf8-to-ascii path="be/docarch/accessibility/ooo/toolpanel/l10n" dir="addon"/>
+
+		<property name="saxon.jar" value="resources/saxon9he.jar"/>
+
+		<macrodef name="create-l10n-properties">
+			<attribute name="src"/>
+			<attribute name="dest"/>
+			<attribute name="name"/>
+			<sequential>
+				<unzip src="@{src}" dest="temp/"/>
+				<java jar="${saxon.jar}" fork="yes">
+					<arg value="temp/content.xml"/>
+					<arg value="resources/create-l10n-properties.xsl"/>
+					<arg value="dest=@{dest}"/>
+					<arg value="name=@{name}"/>
+				</java>
+				<delete dir="temp"/>
+			</sequential>
+		</macrodef>
+
+		<create-l10n-properties
+			src="l10n-toolpanel.ods"
+			dest="l10n-toolpanel/be/docarch/accessodf/ooo/toolpanel/l10n"
+			name="toolpanel"/>
+			
+		<create-l10n-properties
+			src="l10n-checks.ods"
+			dest="l10n-checks/be/docarch/accessodf/ooo/l10n"
+			name="Bundle"/>
+				
+		<create-l10n-properties
+			src="l10n-odt2braille.ods"
+			dest="l10n-odt2braille/be/docarch/odt2braille/l10n"
+			name="Checks"/>
 
 	</target>
 </project>
