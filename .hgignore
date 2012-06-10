@@ -2,3 +2,4 @@ syntax: glob
 .DS_Store
 build
 dist
+l10n/*.properties

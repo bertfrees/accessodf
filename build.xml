@@ -55,6 +55,7 @@
 		<ant dir="l10n" inheritAll="false" />
 	</target>
 	
+	<!-- TODO: licenses build.xml bestand en header bestanden uit licences folder verwijderen -->
 	<target name="licenses"
 			description="Add license headers">
 		<ant dir="licenses" inheritAll="false" />
@@ -77,7 +78,7 @@
     <target name="-pre-uno-package"/>
     <target name="-post-compile"/>
     <target name="-post-jar"/>
-    <target name="-pre-jar"/>
+    <target name="-pre-jar" depends="-copy-localisation-files"/>
     <target name="-post-compile-test"/>
     <target name="-pre-compile-test"/>
     <target name="-post-clean"/>
@@ -96,6 +97,7 @@
             <path path="."/>
         </pathconvert>
 
+        <!-- TODO: dist/lib folder niet kopiëren naar .oxt indien core.deploy.dir isset -->
         <pathconvert property="core.deploy.dir">
             <path path="${dist.dir}/${external.jar.dir}"/>
         </pathconvert>
@@ -234,6 +236,24 @@
             </manifest>
     	</jar>
     </target>
+	
+	<!-- Copy localisation files -->
+	<target name="-copy-localisation-files">
+		<copy todir="${build.addon.classes.dir}">
+		    <fileset dir="l10n/l10n-checks/">
+		        <patternset>
+		            <include name="**/*.properties"/>
+		        </patternset>
+		    </fileset>
+		</copy>
+		<copy todir="${build.addon.classes.dir}">
+		    <fileset dir="l10n/l10n-toolpanel/">
+		        <patternset>
+		            <include name="**/*.properties"/>
+		        </patternset>
+		    </fileset>
+		</copy>
+	</target>
 	
 	
 <!--
