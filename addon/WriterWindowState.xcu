@@ -16,6 +16,7 @@
                     <value xml:lang="es">Accesibilidad</value>
                     <value xml:lang="nl">Toegankelijkheid</value>
                     <value xml:lang="fr">Accessibilité</value>
+                    <value xml:lang="de">Barrierefreiheit</value>
 		    <value xml:lang="el">Προσβασιμότητα</value>
                 </prop>
             </node>
