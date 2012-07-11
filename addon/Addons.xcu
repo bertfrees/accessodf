@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='UTF-8'?>
+<?xml version='1.0' encoding='UTF-8'?>
 
 <oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:name="Addons" oor:package="org.openoffice.Office">
   <node oor:name="AddonUI">
@@ -23,11 +23,12 @@
             <value>be.docarch.accessodf.ooo.accessodfaddon:TaskPanelCommand</value>
            </prop>
            <prop oor:name="Title" oor:type="xs:string">							
-            <value xml:lang="en">~Accessibility Evalutation…</value>
+            <value xml:lang="en">~Accessibility Evaluation…</value>
 		    <value xml:lang="es">~Accesibilidad…</value>
 		    <value xml:lang="nl">~Toegankelijkheid…</value>
 		    <value xml:lang="fr">~Accessibilité…</value>
 		    <value xml:lang="el">~Προσβασιμότητα…</value>
+		    <value xml:lang="de">~Barrierefreiheit…</value>
            </prop>
           </node>
          </node>
