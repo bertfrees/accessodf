@@ -123,6 +123,8 @@ public class AccessibilityPanel extends ComponentBase
     private final String L10N_repairAll;
     private final String L10N_recheck;
     private final String L10N_moreHelp;
+    private final String L10N_congratulations;
+    private final String L10N_noIssuesFound;
 
     private final Rectangle[] controlRectangles = new Rectangle[12];
 
@@ -210,6 +212,8 @@ public class AccessibilityPanel extends ComponentBase
         L10N_repairAll = bundle.getString("repairAll");
         L10N_recheck = bundle.getString("recheck");
         L10N_moreHelp = bundle.getString("moreHelp");
+        L10N_congratulations = bundle.getString("congratulations");
+        L10N_noIssuesFound = bundle.getString("noIssuesFound");
 
         try {
 
@@ -1378,7 +1382,7 @@ public class AccessibilityPanel extends ComponentBase
     }
 
     private void showSuccesWindow() {
-        UnoAwtUtils.showInfoMessageBox(docWindowPeer, "Congratulations", "No accessibility issues were found.");
+        UnoAwtUtils.showInfoMessageBox(docWindowPeer, L10N_congratulations, L10N_noIssuesFound);
     }
 
     //XToolPanel
