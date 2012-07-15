@@ -85,7 +85,7 @@
 	<xsl:function name="my:int-to-hex" as="xs:string">
 		<xsl:param name="in" as="xs:integer"/>
 		<xsl:sequence select="if ($in = 0) then '0' else concat(
-			if ($in &gt; 16) then my:int-to-hex($in idiv 16) else '',
+			if ($in &gt;= 16) then my:int-to-hex($in idiv 16) else '',
 			substring('0123456789abcdef', ($in mod 16) + 1, 1))"/>
 	</xsl:function>
 	
