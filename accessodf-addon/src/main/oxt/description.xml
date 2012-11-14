@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <description xmlns="http://openoffice.org/extensions/description/2006" xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Release Number -->
-    <version value="0.1.0"/>
+    <version value="${accessodf.version}"/>
     <!-- Identifier -->
     <identifier value="be.docarch.accessodf.ooo.accessodfaddon"/>
     <!-- OpenOffice.org Minimal Version -->
     <dependencies>
-        <OpenOffice.org-minimal-version value="3.3" name="OpenOffice.org 3.3"/>
+        <OpenOffice.org-minimal-version value="${openoffice.version}" name="OpenOffice.org ${openoffice.version}"/>
     </dependencies>
     <!-- Auto Update Link: TODO-->
 	
