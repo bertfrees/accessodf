@@ -34,6 +34,10 @@
 		<accessodf.version>${project.version}</accessodf.version>
 		<openoffice.version>3.3.0</openoffice.version>
 	</properties>
+	<modules>
+		<module>accessodf-core</module>
+		<module>accessodf-addon</module>
+	</modules>
 	<dependencyManagement>
 		<dependencies>
 			<!-- AccessODF Modules -->
