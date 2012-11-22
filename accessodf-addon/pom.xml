@@ -41,7 +41,7 @@
 			</resource>
 			<resource>
 				<targetPath>be/docarch/accessodf/ooo/l10n</targetPath>
-				<directory>target/l10n/bundles/Bundle</directory>
+				<directory>target/l10n/bundles/checks</directory>
 			</resource>
 			<resource>
 				<targetPath>be/docarch/accessodf/ooo/toolpanel/l10n</targetPath>
@@ -54,7 +54,7 @@
 				<artifactId>l10n-maven-plugin</artifactId>
 				<configuration>
 					<bundles>
-						<bundle>Bundle.ods</bundle>
+						<bundle>checks.ods</bundle>
 						<bundle>toolpanel.ods</bundle>
 					</bundles>
 				</configuration>

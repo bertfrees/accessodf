@@ -31,7 +31,7 @@ import be.docarch.accessodf.Check;
  */
 public class DaisyCheck extends Check {
 
-    private static final String L10N_BUNDLE = "be/docarch/accessodf/ooo/l10n/Bundle";
+    private static final String L10N_BUNDLE = "be/docarch/accessodf/ooo/l10n/checks";
 
     public static enum ID {
 
