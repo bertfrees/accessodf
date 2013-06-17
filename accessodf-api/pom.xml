@@ -8,8 +8,8 @@
 		<artifactId>accessodf</artifactId>
 		<version>0.1.0-SNAPSHOT</version>
 	</parent>
-	<artifactId>accessodf-core</artifactId>
+	<artifactId>accessodf-api</artifactId>
 	<version>0.1.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
-	<name>accessodf :: Core</name>
+	<name>accessodf :: API</name>
 </project>

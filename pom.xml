@@ -35,7 +35,7 @@
 		<openoffice.version>3.3.0</openoffice.version>
 	</properties>
 	<modules>
-		<module>accessodf-core</module>
+		<module>accessodf-api</module>
 		<module>accessodf-addon</module>
 	</modules>
 	<dependencyManagement>
@@ -43,7 +43,7 @@
 			<!-- AccessODF Modules -->
 			<dependency>
 				<groupId>be.docarch</groupId>
-				<artifactId>accessodf-core</artifactId>
+				<artifactId>accessodf-api</artifactId>
 				<version>${accessodf.version}</version>
 			</dependency>
 			<dependency>

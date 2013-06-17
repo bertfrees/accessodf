@@ -26,25 +26,25 @@ import java.util.Locale;
  * @author Bert Frees
  */
 public abstract class Check {
-
+    
     public static enum Status { ALERT,
                                 ERROR };
-
+    
     public abstract String getIdentifier();
-
+    
     public abstract Status getStatus();
     
     public abstract String getName(Locale locale);
-
+    
     public abstract String getDescription(Locale locale);
-
+    
     public abstract String getSuggestion(Locale locale);
-
+    
     @Override
     public String toString() {
         return getIdentifier();
     }
-
+   
     @Override
     public int hashCode() {
         return getIdentifier().hashCode();
