@@ -60,15 +60,31 @@
 				</configuration>
 			</plugin>
 			<plugin>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>target/oxt/lib</outputDirectory>
+							<includeScope>runtime</includeScope>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>be.docarch</groupId>
 				<artifactId>oxt-maven-plugin</artifactId>
 				<configuration>
-					<centralRegistrationClass>be.docarch.accessodf.ooo.CentralRegistrationClass</centralRegistrationClass>
 					<registrationClasses>
 						be.docarch.accessodf.ooo.AccessODFAddOn
 						be.docarch.accessodf.ooo.toolpanel.ToolPanelFactory
 						be.docarch.accessodf.ooo.optionspage.DialogEventHandler
 					</registrationClasses>
+					<classPath>lib/*.jar</classPath>
 					<resources>
 						<resource>
 							<directory>src/main/oxt</directory>

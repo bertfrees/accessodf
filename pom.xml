@@ -111,7 +111,7 @@
 							<execution>
 								<phase>generate-resources</phase>
 								<goals>
-									<goal>generate-resources</goal>
+									<goal>resources</goal>
 								</goals>
 							</execution>
 						</executions>
