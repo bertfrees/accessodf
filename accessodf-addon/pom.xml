@@ -12,6 +12,10 @@
 	<version>0.1.0-SNAPSHOT</version>
 	<packaging>oxt</packaging>
 	<name>accessodf :: Addon</name>
+	<properties>
+		<libreoffice.version>4.2.0</libreoffice.version>
+		<libreoffice.systemPath>/opt/libreoffice4.2</libreoffice.systemPath>
+	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>be.docarch</groupId>
@@ -20,18 +24,30 @@
 		<dependency>
 			<groupId>org.libreoffice</groupId>
 			<artifactId>juh</artifactId>
+			<version>${libreoffice.version}</version>
+			<scope>system</scope>
+			<systemPath>${libreoffice.systemPath}/ure/share/java/juh.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>org.libreoffice</groupId>
 			<artifactId>jurt</artifactId>
+			<version>${libreoffice.version}</version>
+			<scope>system</scope>
+			<systemPath>${libreoffice.systemPath}/ure/share/java/jurt.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>org.libreoffice</groupId>
 			<artifactId>ridl</artifactId>
+			<version>${libreoffice.version}</version>
+			<scope>system</scope>
+			<systemPath>${libreoffice.systemPath}/ure/share/java/ridl.jar</systemPath>
 		</dependency>
 		<dependency>
 			<groupId>org.libreoffice</groupId>
 			<artifactId>unoil</artifactId>
+			<version>${libreoffice.version}</version>
+			<scope>system</scope>
+			<systemPath>${libreoffice.systemPath}/program/classes/unoil.jar</systemPath>
 		</dependency>
 	</dependencies>
 	<build>
