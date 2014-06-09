@@ -112,6 +112,9 @@
 	<profiles>
 		<profile>
 			<id>debian</id>
+			<properties>
+				<debian.classPath>accessodf-api.jar</debian.classPath>
+			</properties>
 			<build>
 				<plugins>
 					<plugin>
@@ -122,25 +125,13 @@
 								<id>copy-dependencies</id>
 								<phase>none</phase>
 							</execution>
-							<execution>
-								<id>build-classpath</id>
-								<phase>prepare-package</phase>
-								<goals>
-									<goal>build-classpath</goal>
-								</goals>
-								<configuration>
-									<outputProperty>classpath</outputProperty>
-									<pathSeparator>:</pathSeparator>
-									<includeScope>runtime</includeScope>
-								</configuration>
-							</execution>
 						</executions>
 					</plugin>
 					<plugin>
 						<groupId>be.docarch</groupId>
 						<artifactId>oxt-maven-plugin</artifactId>
 						<configuration>
-							<classPath>${classpath}</classPath>
+							<classPath>${debian.classPath}</classPath>
 						</configuration>
 					</plugin>
 				</plugins>
