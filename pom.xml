@@ -40,41 +40,42 @@
 	</modules>
 	<dependencyManagement>
 		<dependencies>
-			<!-- AccessODF Modules -->
+			<!--
+			    AccessODF modules
+			-->
 			<dependency>
 				<groupId>be.docarch</groupId>
 				<artifactId>accessodf-api</artifactId>
-				<version>${accessodf.version}</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>be.docarch</groupId>
 				<artifactId>accessodf-addon</artifactId>
-				<version>${accessodf.version}</version>
+				<version>${project.version}</version>
 			</dependency>
-			<!-- Third-Party Libraries -->
+			<!--
+			    third-party libraries
+			-->
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>juh</artifactId>
-				<version>[${openoffice.version},)</version>
+				<version>${openoffice.version}</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>jurt</artifactId>
-				<version>[${openoffice.version},)</version>
-				<scope>provided</scope>
+				<version>${openoffice.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>ridl</artifactId>
-				<version>[${openoffice.version},)</version>
-				<scope>provided</scope>
+				<version>${openoffice.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>unoil</artifactId>
-				<version>[${openoffice.version},)</version>
-				<scope>provided</scope>
+				<version>${openoffice.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
