@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>be.docarch</groupId>
 	<artifactId>accessodf</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.2.0</version>
 	<packaging>pom</packaging>
 	<name>accessodf</name>
 	<description>AccessODF is an extension for LibreOffice Writer that helps authors evaluate and repair accessibility issues in OpenDocument Text.</description>
