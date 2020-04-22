@@ -26,7 +26,11 @@ import java.util.logging.Handler;
 import java.util.logging.FileHandler;
 import java.util.logging.SimpleFormatter;
 
+import com.sun.star.beans.Property;
 import com.sun.star.beans.XPropertySet;
+import com.sun.star.container.XChild;
+import com.sun.star.container.XEnumeration;
+import com.sun.star.container.XEnumerationAccess;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.frame.XModel;
@@ -38,6 +42,7 @@ import com.sun.star.lang.XComponent;
 
 import com.sun.star.lang.XSingleComponentFactory;
 import com.sun.star.registry.XRegistryKey;
+import com.sun.star.ui.XUIElement;
 import com.sun.star.lib.uno.helper.WeakBase;
 import com.sun.star.lib.uno.helper.Factory;
 
@@ -63,6 +68,10 @@ public final class AccessODFAddOn extends WeakBase
     private File logFile = null;
     private int counter = 0;
 
+    /**
+     * ProtocolHandler
+     * @param context
+     */
     public AccessODFAddOn( XComponentContext context )
     {
         m_xContext = context;

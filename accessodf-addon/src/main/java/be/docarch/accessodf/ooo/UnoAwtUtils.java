@@ -20,6 +20,7 @@
 package be.docarch.accessodf.ooo;
 
 import com.sun.star.awt.MessageBoxButtons;
+import com.sun.star.awt.MessageBoxType;
 import com.sun.star.awt.Rectangle;
 import com.sun.star.awt.XMessageBox;
 import com.sun.star.awt.XMessageBoxFactory;
@@ -103,7 +104,7 @@ public class UnoAwtUtils {
         return sStorePath;
     }
 
-    public static short showMessageBox(XWindowPeer parentWindowPeer, String messageBoxType, int messageBoxButtons, String messageBoxTitle, String message) {
+    public static short showMessageBox(XWindowPeer parentWindowPeer, MessageBoxType messageBoxType, int messageBoxButtons, String messageBoxTitle, String message) {
         if (parentWindowPeer == null || messageBoxType == null || messageBoxTitle == null || message == null) {
             return 0;
         }
@@ -111,9 +112,7 @@ public class UnoAwtUtils {
         // Initialize the message box factory
         XMessageBoxFactory messageBoxFactory = (XMessageBoxFactory) UnoRuntime.queryInterface(XMessageBoxFactory.class, parentWindowPeer.getToolkit());
 
-        Rectangle messageBoxRectangle = new Rectangle();
-
-        XMessageBox box = messageBoxFactory.createMessageBox(parentWindowPeer, messageBoxRectangle, messageBoxType, messageBoxButtons, messageBoxTitle, message);
+        XMessageBox box = messageBoxFactory.createMessageBox(parentWindowPeer, messageBoxType, messageBoxButtons, messageBoxTitle, message);
         return box.execute();
     }
 
@@ -122,7 +121,7 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "infobox", MessageBoxButtons.BUTTONS_OK, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.INFOBOX, MessageBoxButtons.BUTTONS_OK, messageBoxTitle, message);
     }
 
     public static short showErrorMessageBox(XWindowPeer parentWindowPeer, String messageBoxTitle, String message) {
@@ -130,7 +129,7 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "errorbox", MessageBoxButtons.BUTTONS_OK, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.ERRORBOX, MessageBoxButtons.BUTTONS_OK, messageBoxTitle, message);
     }
 
     public static short showYesNoWarningMessageBox(XWindowPeer parentWindowPeer, String messageBoxTitle, String message) {
@@ -138,7 +137,7 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "warningbox", MessageBoxButtons.BUTTONS_YES_NO + MessageBoxButtons.DEFAULT_BUTTON_NO, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.WARNINGBOX, MessageBoxButtons.BUTTONS_YES_NO + MessageBoxButtons.DEFAULT_BUTTON_NO, messageBoxTitle, message);
     }
 
     public static short showOkCancelWarningMessageBox(XWindowPeer parentWindowPeer, String messageBoxTitle, String message) {
@@ -146,7 +145,7 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "warningbox", MessageBoxButtons.BUTTONS_OK_CANCEL + MessageBoxButtons.DEFAULT_BUTTON_OK, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.WARNINGBOX, MessageBoxButtons.BUTTONS_OK_CANCEL + MessageBoxButtons.DEFAULT_BUTTON_OK, messageBoxTitle, message);
     }
 
     public static short showQuestionMessageBox(XWindowPeer parentWindowPeer, String messageBoxTitle, String message) {
@@ -154,7 +153,7 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "querybox", MessageBoxButtons.BUTTONS_YES_NO_CANCEL + MessageBoxButtons.DEFAULT_BUTTON_YES, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.QUERYBOX, MessageBoxButtons.BUTTONS_YES_NO_CANCEL + MessageBoxButtons.DEFAULT_BUTTON_YES, messageBoxTitle, message);
     }
 
     public static short showAbortRetryIgnoreErrorMessageBox(XWindowPeer parentWindowPeer, String messageBoxTitle, String message) {
@@ -162,7 +161,7 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "errorbox", MessageBoxButtons.BUTTONS_ABORT_IGNORE_RETRY + MessageBoxButtons.DEFAULT_BUTTON_RETRY, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.ERRORBOX, MessageBoxButtons.BUTTONS_ABORT_IGNORE_RETRY + MessageBoxButtons.DEFAULT_BUTTON_RETRY, messageBoxTitle, message);
     }
 
     public static short showRetryCancelErrorMessageBox(XWindowPeer parentWindowPeer, String messageBoxTitle, String message) {
@@ -170,6 +169,6 @@ public class UnoAwtUtils {
             return 0;
         }
 
-        return showMessageBox(parentWindowPeer, "errorbox", MessageBoxButtons.BUTTONS_RETRY_CANCEL + MessageBoxButtons.DEFAULT_BUTTON_CANCEL, messageBoxTitle, message);
+        return showMessageBox(parentWindowPeer, MessageBoxType.ERRORBOX, MessageBoxButtons.BUTTONS_RETRY_CANCEL + MessageBoxButtons.DEFAULT_BUTTON_CANCEL, messageBoxTitle, message);
     }
 }

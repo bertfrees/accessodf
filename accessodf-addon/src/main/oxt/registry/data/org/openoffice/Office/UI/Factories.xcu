@@ -6,13 +6,14 @@
                     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 
   <node oor:name="Registered">
-    <node oor:name="UIElementFactories">
+    <node oor:name="UIElementFactories">     
       <node oor:name="be.docarch.accessodf.ooo.toolpanel" oor:op="replace">
         <prop oor:name="Type">
           <value>toolpanel</value>
         </prop>
         <prop oor:name="Name">
-          <value>be.docarch.accessodf.ooo.toolpanel</value>
+          <!-- <value>be.docarch.accessodf.ooo.toolpanel</value> -->
+          <value>AccessODFPanelFactory</value>
         </prop>
         <prop oor:name="Module">
           <value/>

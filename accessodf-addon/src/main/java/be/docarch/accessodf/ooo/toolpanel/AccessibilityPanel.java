@@ -71,6 +71,8 @@ import com.sun.star.awt.AdjustmentEvent;
 import com.sun.star.awt.tree.XTreeControl;
 import com.sun.star.awt.tree.XMutableTreeDataModel;
 import com.sun.star.awt.tree.XMutableTreeNode;
+import com.sun.star.ui.LayoutSize;
+import com.sun.star.ui.XSidebarPanel;
 import com.sun.star.ui.XToolPanel;
 import com.sun.star.deployment.PackageInformationProvider;
 import com.sun.star.deployment.XPackageInformationProvider;
@@ -101,6 +103,7 @@ public class AccessibilityPanel extends ComponentBase
                                         XItemListener,
                                         XActionListener,
                                         XWindowListener,
+                                        XSidebarPanel,
                                         XAdjustmentListener,
                                         XSelectionChangeListener {
 
@@ -231,6 +234,7 @@ public class AccessibilityPanel extends ComponentBase
                 window = (XWindow)UnoRuntime.queryInterface(XWindow.class, windowPeer);
 
                 if (window != null) {
+                	window.setVisible(true);
 
                     window.setPosSize(0, 0, panelAnchorSize.Width, panelAnchorSize.Height, PosSize.POSSIZE);
 
@@ -1421,4 +1425,17 @@ public class AccessibilityPanel extends ComponentBase
             return null;
         }
     }
+
+	@Override
+	public LayoutSize getHeightForWidth (final int nWidth)
+	{
+//		final int nMinHeight = 100;
+//		final int nMaxHeight = Math.max(nWidth, nMinHeight);
+		return new LayoutSize(100, 1000, 500); // min, max, preferred
+	}
+
+	@Override
+	public int getMinimalWidth() {
+		return 300;
+	}
 }

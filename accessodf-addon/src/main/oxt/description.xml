@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<description xmlns="http://openoffice.org/extensions/description/2006" xmlns:xlink="http://www.w3.org/1999/xlink">
+<description 
+	xmlns="http://openoffice.org/extensions/description/2006" 
+	xmlns:xlink="http://www.w3.org/1999/xlink">
     <!-- Release Number -->
     <version value="${accessodf.version}"/>
     <!-- Identifier -->
     <identifier value="be.docarch.accessodf.ooo.accessodfaddon"/>
-    <!-- OpenOffice.org Minimal Version -->
-    <dependencies>
-        <OpenOffice.org-minimal-version value="${openoffice.version}" name="OpenOffice.org ${openoffice.version}"/>
+    <!-- LibreOffice Minimal Version -->
+    <dependencies xmlns:lo="http://libreoffice.org/extensions/description/2011">
+        <lo:LibreOffice-minimal-version value="${libreoffice.version}" name="LibreOffice ${libreoffice.version}"/>
     </dependencies>
     <!-- Auto Update Link: TODO-->
 	

@@ -32,7 +32,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<accessodf.version>${project.version}</accessodf.version>
-		<openoffice.version>3.3.0</openoffice.version>
+		<libreoffice.version>6.3.2</libreoffice.version>
 	</properties>
 	<modules>
 		<module>accessodf-api</module>
@@ -59,23 +59,26 @@
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>juh</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>jurt</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
+				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>ridl</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
+				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>unoil</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
+				<scope>provided</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
