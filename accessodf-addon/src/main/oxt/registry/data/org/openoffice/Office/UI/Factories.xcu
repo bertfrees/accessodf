@@ -12,7 +12,6 @@
           <value>toolpanel</value>
         </prop>
         <prop oor:name="Name">
-          <!-- <value>be.docarch.accessodf.ooo.toolpanel</value> -->
           <value>AccessODFPanelFactory</value>
         </prop>
         <prop oor:name="Module">

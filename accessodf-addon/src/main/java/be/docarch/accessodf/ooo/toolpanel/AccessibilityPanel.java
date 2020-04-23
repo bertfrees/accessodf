@@ -1429,8 +1429,6 @@ public class AccessibilityPanel extends ComponentBase
 	@Override
 	public LayoutSize getHeightForWidth (final int nWidth)
 	{
-//		final int nMinHeight = 100;
-//		final int nMaxHeight = Math.max(nWidth, nMinHeight);
 		return new LayoutSize(100, 1000, 500); // min, max, preferred
 	}
 

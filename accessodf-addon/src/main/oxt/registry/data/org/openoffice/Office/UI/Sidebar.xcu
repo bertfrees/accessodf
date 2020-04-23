@@ -27,10 +27,6 @@
 
     <node oor:name="PanelList">
       <node oor:name="AccessibilityPanel" oor:op="replace">
-        <!-- <prop oor:name="Title" oor:type="xs:string">
-          <value xml:lang="en-US">Accessibility</value>
-          <value xml:lang="de-DE">Barrierefreiheit</value>
-        </prop> -->
         <prop oor:name="Id" oor:type="xs:string">
           <value>AccessibilityPanel</value>
         </prop>
