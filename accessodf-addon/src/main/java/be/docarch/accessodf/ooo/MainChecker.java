@@ -40,6 +40,7 @@ import com.sun.star.beans.XPropertySet;
 import com.sun.star.container.XEnumerationAccess;
 import com.sun.star.container.XEnumeration;
 import com.sun.star.container.XIndexAccess;
+import com.sun.star.container.XNameContainer;
 import com.sun.star.container.XNamed;
 import com.sun.star.graphic.XGraphic;
 import com.sun.star.text.XTextFramesSupplier;
@@ -67,6 +68,8 @@ import com.sun.star.rdf.URI;
 import com.sun.star.rdf.XNamedGraph;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawPageSupplier;
+import com.sun.star.form.XForm;
+import com.sun.star.form.XFormComponent;
 import com.sun.star.form.XFormsSupplier2;
 import com.sun.star.linguistic2.XLanguageGuessing;
 
@@ -286,7 +289,7 @@ public class MainChecker implements RunnableChecker {
         if (daisyChecks) {
             if (document.docProperties.getTitle().length() == 0) { metadata.add(DaisyCheck.ID.A_EmptyTitleField.name()); }
         }
-        if (xSuppForms.hasForms()) { metadata.add(GeneralCheck.ID.A_HasForms.name()); }
+        if (xSuppForms.hasForms() && xSuppForms.getForms().getElementNames().length > 0) { metadata.add(GeneralCheck.ID.A_HasForms.name()); }
         if (numberOfTitles == 0)   { metadata.add(GeneralCheck.ID.A_NoTitle.name()); }
         if (numberOfHeadings == 0) { metadata.add(GeneralCheck.ID.A_NoHeadings.name()); }
         if (metadata.size() > 0) {
@@ -998,10 +1001,7 @@ public class MainChecker implements RunnableChecker {
             
             if (!linked) {
                 if (daisyChecks) {
-                    graphic = (XGraphic)AnyConverter.toObject(
-                               XGraphic.class, properties.getPropertyValue("Graphic"));
-                    mediaProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphic);
-                    mimeType = AnyConverter.toString(mediaProperties.getPropertyValue("MimeType"));
+                    mimeType = AnyConverter.toString(xGraphicDescriptor.getPropertyValue("MimeType"));
                     if (!mimeType.equals("image/jpeg") &&              
                         !mimeType.equals("image/png") &&
                         !mimeType.equals("image/x-vclgraphic")) {
