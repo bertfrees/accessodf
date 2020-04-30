@@ -968,6 +968,9 @@ public class MainChecker implements RunnableChecker {
         String url = null;
         String fileExtension = null;
         String mimeType = null;
+        XPropertySet xGraphicDescriptor = null;
+        boolean linked = false;
+        boolean animated = false;
 
         Collection<String> graphicMetadata = new ArrayList<String>();
 
@@ -975,10 +978,14 @@ public class MainChecker implements RunnableChecker {
 
             graphicObject = graphicObjects.getByIndex(i);
             properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphicObject);
+            graphic = (XGraphic) AnyConverter.toObject(XGraphic.class, properties.getPropertyValue("Graphic"));
+            xGraphicDescriptor = UnoRuntime.queryInterface(XPropertySet.class, graphic);
 
             title = AnyConverter.toString(properties.getPropertyValue("Title"));
             description = AnyConverter.toString(properties.getPropertyValue("Description"));
-            url = AnyConverter.toString(properties.getPropertyValue("GraphicURL"));
+            linked = AnyConverter.toBoolean(xGraphicDescriptor.getPropertyValue("Linked"));
+            url = AnyConverter.toString(xGraphicDescriptor.getPropertyValue("OriginURL"));
+            animated = AnyConverter.toBoolean(xGraphicDescriptor.getPropertyValue("Animated"));
 
             TextContentAnchorType anchorType = (TextContentAnchorType)AnyConverter.toObject(
                                                 TextContentAnchorType.class, properties.getPropertyValue("AnchorType"));
@@ -988,7 +995,8 @@ public class MainChecker implements RunnableChecker {
             if (title.length() == 0) {
                 graphicMetadata.add(GeneralCheck.ID.A_ImageWithoutAlt.name());
             }
-            if (url.startsWith("vnd.sun.star.GraphicObject:")) {
+            
+            if (!linked) {
                 if (daisyChecks) {
                     graphic = (XGraphic)AnyConverter.toObject(
                                XGraphic.class, properties.getPropertyValue("Graphic"));
