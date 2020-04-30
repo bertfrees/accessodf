@@ -34,7 +34,6 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.io.File;
 import java.io.FileFilter;
-
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.AnyConverter;
@@ -71,6 +70,8 @@ import com.sun.star.awt.AdjustmentEvent;
 import com.sun.star.awt.tree.XTreeControl;
 import com.sun.star.awt.tree.XMutableTreeDataModel;
 import com.sun.star.awt.tree.XMutableTreeNode;
+import com.sun.star.ui.LayoutSize;
+import com.sun.star.ui.XSidebarPanel;
 import com.sun.star.ui.XToolPanel;
 import com.sun.star.deployment.PackageInformationProvider;
 import com.sun.star.deployment.XPackageInformationProvider;
@@ -101,6 +102,7 @@ public class AccessibilityPanel extends ComponentBase
                                         XItemListener,
                                         XActionListener,
                                         XWindowListener,
+                                        XSidebarPanel,
                                         XAdjustmentListener,
                                         XSelectionChangeListener {
 
@@ -231,6 +233,7 @@ public class AccessibilityPanel extends ComponentBase
                 window = (XWindow)UnoRuntime.queryInterface(XWindow.class, windowPeer);
 
                 if (window != null) {
+                	window.setVisible(true);
 
                     window.setPosSize(0, 0, panelAnchorSize.Width, panelAnchorSize.Height, PosSize.POSSIZE);
 
@@ -589,21 +592,16 @@ public class AccessibilityPanel extends ComponentBase
         logger.exiting("AccessibilityPanel", "initialize");
     }
 
-    private void refresh() throws IllegalArgumentException,
-                                  ElementExistException,
-                                  RepositoryException,
-                                  UnknownPropertyException,
-                                  NoSuchElementException,
-                                  WrappedTargetException,
-                                  PropertyVetoException,
-                                  ExpandVetoException,
-                                  java.text.ParseException,
-                                  java.io.IOException,
+    private void refresh() throws java.io.IOException,
                                   com.sun.star.uno.Exception {
 
         logger.entering("AccessibilityPanel", "refresh");
 
-        manager.refresh();
+        try {
+			manager.refresh();
+		} catch (ChecksFailedException e) {
+			handleUnexpectedException(e);
+		}
 
         focusedIssue = null;
         Issue oldIssue = manager.selectedIssue();
@@ -1377,7 +1375,7 @@ public class AccessibilityPanel extends ComponentBase
     private void handleUnexpectedException(Exception ex) {
 
         logger.log(Level.SEVERE, null, ex);
-        UnoAwtUtils.showErrorMessageBox(docWindowPeer, "Unexpected exception","Unexpected exception");
+        UnoAwtUtils.showErrorMessageBox(docWindowPeer, "Unexpected exception","Unexpected exception: " + ex.getMessage());
 
     }
 
@@ -1421,4 +1419,15 @@ public class AccessibilityPanel extends ComponentBase
             return null;
         }
     }
+
+	@Override
+	public LayoutSize getHeightForWidth (final int nWidth)
+	{
+		return new LayoutSize(100, 1000, 500); // min, max, preferred
+	}
+
+	@Override
+	public int getMinimalWidth() {
+		return 300;
+	}
 }

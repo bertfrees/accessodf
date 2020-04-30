@@ -40,6 +40,7 @@ import com.sun.star.lib.uno.helper.WeakBase;
 import com.sun.star.registry.XRegistryKey;
 
 import com.sun.star.container.NoSuchElementException;
+import com.sun.star.frame.XFrame;
 import com.sun.star.lang.IllegalArgumentException;
 
 import be.docarch.accessodf.Constants;
@@ -88,25 +89,30 @@ public class ToolPanelFactory  {
 
             logger.entering("_ToolPanelFactory", "createUIElement");
 
-            if (!i_rResourceURL.startsWith("private:resource/toolpanel/be.docarch.accessodf.ooo.toolpanel")) {
-                throw new NoSuchElementException(i_rResourceURL, this);
+            if (!i_rResourceURL.startsWith("private:resource/toolpanel/AccessODFPanelFactory/be.docarch.accessodf.ooo.toolpanel")) {
+            	logger.severe("got wrong resource url: " + i_rResourceURL);
+            	throw new NoSuchElementException(i_rResourceURL, this);
             }
 
             // retrieve the parent window
             XWindow xParentWindow = null;
+            XFrame xFrame = null;
+            
             for (int i=0; i<i_rArgs.length; i++) {
                 if (i_rArgs[i].Name.equals("ParentWindow")) {
                     xParentWindow = (XWindow)UnoRuntime.queryInterface(XWindow.class, i_rArgs[i].Value);
-                    break;
+                }
+                else if (i_rArgs[i].Name.equals("Frame")) {
+                	xFrame = (XFrame)UnoRuntime.queryInterface(XFrame.class, i_rArgs[i].Value);
                 }
             }
 
-            if (xParentWindow == null) {                
-                throw new IllegalArgumentException("No parent window provided in the creation arguments. Cannot create tool panel.");
+            if (xParentWindow == null || xFrame == null) {                
+                throw new IllegalArgumentException("No parent window or Frame provided in the creation arguments. Cannot create tool panel.");
             }
 
             // create the panel
-            return new PanelUIElement(m_xContext, xParentWindow, i_rResourceURL);
+            return new PanelUIElement(i_rResourceURL, xFrame,  new AccessibilityPanel(m_xContext, xParentWindow));
 
         }
 

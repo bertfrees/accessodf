@@ -124,18 +124,14 @@ public class IssueManager {
         
     }
 
-    public void refresh() throws IllegalArgumentException,
-                                 RepositoryException,
-                                 UnknownPropertyException,
-                                 NoSuchElementException,
-                                 WrappedTargetException,
-                                 PropertyVetoException,
-                                 ParseException,
-                                 IOException,
-                                 com.sun.star.uno.Exception {
+    public void refresh() throws IOException,
+                                 com.sun.star.uno.Exception, 
+                                 ChecksFailedException {
 
         settings.loadData();
         File odtFile = null;
+        
+        ArrayList<Exception> exceptions = new ArrayList<Exception>();
 
         for (Checker checker : checkers.list()) {
             if (checker instanceof RemoteRunnableChecker) {
@@ -150,20 +146,32 @@ public class IssueManager {
                 }
                 RemoteRunnableChecker remoteChecker = (RemoteRunnableChecker)checker;
                 remoteChecker.setOdtFile(odtFile);
-                if (remoteChecker.run()) {
-                    document.removeAccessibilityData(remoteChecker.getIdentifier());
-                    Report report = remoteChecker.getAccessibilityReport();
-                    if (report != null) {
-                        document.importAccessibilityData(report.getFile(), remoteChecker.getIdentifier(), report.getName());
-                    }
+                
+                try {
+                	remoteChecker.run();
+                	document.removeAccessibilityData(remoteChecker.getIdentifier());
+                	Report report = remoteChecker.getAccessibilityReport();
+                	if (report != null) {
+                		document.importAccessibilityData(report.getFile(), remoteChecker.getIdentifier(), report.getName());
+                	}
+                } catch (Exception e) {
+                	exceptions.add(e);
                 }
             } else if (checker instanceof RunnableChecker) {
-                ((RunnableChecker)checker).run();
+                try {
+					((RunnableChecker)checker).run();
+				} catch (Exception e) {
+					exceptions.add(e);
+				}
             }
         }
 
         // Load accessibility issues from metadata
         loadMetadata();
+        
+        if (!exceptions.isEmpty()) {
+        	throw new ChecksFailedException(exceptions);
+        }
     }
 
     public void clear() throws IllegalArgumentException,

@@ -27,7 +27,8 @@ public interface RunnableChecker extends Checker {
 
     /**
      * @return <code>true</code> if the check was successful
+     * @throws Exception 
      */
-    public boolean run();
+    public void run() throws Exception;
 
 }

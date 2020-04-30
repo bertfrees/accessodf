@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>be.docarch</groupId>
 	<artifactId>accessodf</artifactId>
-	<version>0.1.0-SNAPSHOT</version>
+	<version>0.2.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>accessodf</name>
 	<description>AccessODF is an extension for LibreOffice Writer that helps authors evaluate and repair accessibility issues in OpenDocument Text.</description>
@@ -32,7 +32,9 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<accessodf.version>${project.version}</accessodf.version>
-		<openoffice.version>3.3.0</openoffice.version>
+		<libreoffice.version>6.3.2</libreoffice.version>
+	    <maven.compiler.source>1.8</maven.compiler.source>
+    	<maven.compiler.target>1.8</maven.compiler.target>
 	</properties>
 	<modules>
 		<module>accessodf-api</module>
@@ -59,23 +61,26 @@
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>juh</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
 				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>jurt</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
+				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>ridl</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
+				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.libreoffice</groupId>
 				<artifactId>unoil</artifactId>
-				<version>${openoffice.version}</version>
+				<version>${libreoffice.version}</version>
+				<scope>provided</scope>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

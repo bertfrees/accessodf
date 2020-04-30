@@ -3,13 +3,15 @@
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.uno-component;type=Java"
                        manifest:full-path="accessodf-addon-${accessodf.version}.jar"/>
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
-                       manifest:full-path="WriterWindowState.xcu"/>
-  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
-                       manifest:full-path="ProtocolHandler.xcu"/>
+                       manifest:full-path="registry/ProtocolHandler.xcu"/>
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
                        manifest:full-path="Addons.xcu"/>
+
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
-                       manifest:full-path="Factories.xcu"/>
+                       manifest:full-path="registry/data/org/openoffice/Office/UI/Factories.xcu"/>
+  <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"
+                       manifest:full-path="registry/data/org/openoffice/Office/UI/Sidebar.xcu"/>
+
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-schema"
                        manifest:full-path="Settings.xcs"/>
   <manifest:file-entry manifest:media-type="application/vnd.sun.star.configuration-data"

@@ -40,6 +40,7 @@ import com.sun.star.beans.XPropertySet;
 import com.sun.star.container.XEnumerationAccess;
 import com.sun.star.container.XEnumeration;
 import com.sun.star.container.XIndexAccess;
+import com.sun.star.container.XNameContainer;
 import com.sun.star.container.XNamed;
 import com.sun.star.graphic.XGraphic;
 import com.sun.star.text.XTextFramesSupplier;
@@ -67,6 +68,8 @@ import com.sun.star.rdf.URI;
 import com.sun.star.rdf.XNamedGraph;
 import com.sun.star.drawing.XDrawPage;
 import com.sun.star.drawing.XDrawPageSupplier;
+import com.sun.star.form.XForm;
+import com.sun.star.form.XFormComponent;
 import com.sun.star.form.XFormsSupplier2;
 import com.sun.star.linguistic2.XLanguageGuessing;
 
@@ -171,7 +174,7 @@ public class MainChecker implements RunnableChecker {
         return getIdentifier();
     }
 
-    public boolean run(){
+    public void run() throws Exception{
 
       //document.removeAccessibilityData(getIdentifier());
 
@@ -179,53 +182,43 @@ public class MainChecker implements RunnableChecker {
         reportName = MainChecker.class.getCanonicalName()
                         + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(new Date()) + ".rdf";
 
+        settings.loadData();
+        daisyChecks = settings.daisyChecks();
+        detectedIssues.clear();
+        detectedChecks.clear();
+        textMetaMap.clear();
+
+        // Traverse document
+        traverseDocument();
+
+        // Save detected issues in RDF
+
+        XURI[] types = new XURI[]{ URI.create(document.xContext, getIdentifier()) };
+        XURI graphURI = null;
         try {
-
-            settings.loadData();
-            daisyChecks = settings.daisyChecks();
-            detectedIssues.clear();
-            detectedChecks.clear();
-            textMetaMap.clear();
-
-            // Traverse document
-            traverseDocument();
-
-            // Save detected issues in RDF
-
-            XURI[] types = new XURI[]{ URI.create(document.xContext, getIdentifier()) };
-            XURI graphURI = null;
-            try {
-                graphURI = document.xDMA.addMetadataFile(document.metaFolder + reportName, types);
-            } catch (ElementExistException e) {
-                graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + reportName);
-            }
-
-            XNamedGraph graph = document.xRepository.getGraph(graphURI);
-            Assertions assertions = new Assertions(graph, document);
-            if (detectedIssues.isEmpty()) {
-                // Create dummy assertion to indicate that the document is validated
-                assertions.create(new Issue(null, dummyCheck, this, date)).write();
-            }
-            for (Issue i : detectedIssues) {
-                if (detectedChecks.get(i.getCheck()) <= 10) {
-                    assertions.create(i).write();
-                }
-            }
-            for (Check c : detectedChecks.keySet()) {
-                if (detectedChecks.get(c) > 10) {
-                    assertions.create(new Issue(null, c, this, date, detectedChecks.get(c))).write();
-                }
-            }
-
-            document.setModified();
-
-            return true;
-
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, null, e);
+            graphURI = document.xDMA.addMetadataFile(document.metaFolder + reportName, types);
+        } catch (ElementExistException e) {
+            graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + reportName);
         }
 
-        return false;
+        XNamedGraph graph = document.xRepository.getGraph(graphURI);
+        Assertions assertions = new Assertions(graph, document);
+        if (detectedIssues.isEmpty()) {
+            // Create dummy assertion to indicate that the document is validated
+            assertions.create(new Issue(null, dummyCheck, this, date)).write();
+        }
+        for (Issue i : detectedIssues) {
+            if (detectedChecks.get(i.getCheck()) <= 10) {
+                assertions.create(i).write();
+            }
+        }
+        for (Check c : detectedChecks.keySet()) {
+            if (detectedChecks.get(c) > 10) {
+                assertions.create(new Issue(null, c, this, date, detectedChecks.get(c))).write();
+            }
+        }
+
+        document.setModified();
     }
 
     private void traverseDocument() throws IllegalArgumentException,
@@ -296,7 +289,7 @@ public class MainChecker implements RunnableChecker {
         if (daisyChecks) {
             if (document.docProperties.getTitle().length() == 0) { metadata.add(DaisyCheck.ID.A_EmptyTitleField.name()); }
         }
-        if (xSuppForms.hasForms()) { metadata.add(GeneralCheck.ID.A_HasForms.name()); }
+        if (xSuppForms.hasForms() && xSuppForms.getForms().getElementNames().length > 0) { metadata.add(GeneralCheck.ID.A_HasForms.name()); }
         if (numberOfTitles == 0)   { metadata.add(GeneralCheck.ID.A_NoTitle.name()); }
         if (numberOfHeadings == 0) { metadata.add(GeneralCheck.ID.A_NoHeadings.name()); }
         if (metadata.size() > 0) {
@@ -978,6 +971,9 @@ public class MainChecker implements RunnableChecker {
         String url = null;
         String fileExtension = null;
         String mimeType = null;
+        XPropertySet xGraphicDescriptor = null;
+        boolean linked = false;
+        boolean animated = false;
 
         Collection<String> graphicMetadata = new ArrayList<String>();
 
@@ -985,10 +981,14 @@ public class MainChecker implements RunnableChecker {
 
             graphicObject = graphicObjects.getByIndex(i);
             properties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphicObject);
+            graphic = (XGraphic) AnyConverter.toObject(XGraphic.class, properties.getPropertyValue("Graphic"));
+            xGraphicDescriptor = UnoRuntime.queryInterface(XPropertySet.class, graphic);
 
             title = AnyConverter.toString(properties.getPropertyValue("Title"));
             description = AnyConverter.toString(properties.getPropertyValue("Description"));
-            url = AnyConverter.toString(properties.getPropertyValue("GraphicURL"));
+            linked = AnyConverter.toBoolean(xGraphicDescriptor.getPropertyValue("Linked"));
+            url = AnyConverter.toString(xGraphicDescriptor.getPropertyValue("OriginURL"));
+            animated = AnyConverter.toBoolean(xGraphicDescriptor.getPropertyValue("Animated"));
 
             TextContentAnchorType anchorType = (TextContentAnchorType)AnyConverter.toObject(
                                                 TextContentAnchorType.class, properties.getPropertyValue("AnchorType"));
@@ -998,12 +998,10 @@ public class MainChecker implements RunnableChecker {
             if (title.length() == 0) {
                 graphicMetadata.add(GeneralCheck.ID.A_ImageWithoutAlt.name());
             }
-            if (url.startsWith("vnd.sun.star.GraphicObject:")) {
+            
+            if (!linked) {
                 if (daisyChecks) {
-                    graphic = (XGraphic)AnyConverter.toObject(
-                               XGraphic.class, properties.getPropertyValue("Graphic"));
-                    mediaProperties = (XPropertySet)UnoRuntime.queryInterface(XPropertySet.class, graphic);
-                    mimeType = AnyConverter.toString(mediaProperties.getPropertyValue("MimeType"));
+                    mimeType = AnyConverter.toString(xGraphicDescriptor.getPropertyValue("MimeType"));
                     if (!mimeType.equals("image/jpeg") &&              
                         !mimeType.equals("image/png") &&
                         !mimeType.equals("image/x-vclgraphic")) {
