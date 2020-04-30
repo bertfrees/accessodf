@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>be.docarch</groupId>
 		<artifactId>accessodf</artifactId>
-		<version>0.2.1-SNAPSHOT</version>
+		<version>0.2.2-SNAPSHOT</version>
 		<relativePath>../</relativePath>
 	</parent>
 	<artifactId>accessodf-api</artifactId>
