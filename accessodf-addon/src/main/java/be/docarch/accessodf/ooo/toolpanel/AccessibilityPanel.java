@@ -34,7 +34,6 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.io.File;
 import java.io.FileFilter;
-
 import com.sun.star.uno.XComponentContext;
 import com.sun.star.uno.UnoRuntime;
 import com.sun.star.uno.AnyConverter;
@@ -593,21 +592,16 @@ public class AccessibilityPanel extends ComponentBase
         logger.exiting("AccessibilityPanel", "initialize");
     }
 
-    private void refresh() throws IllegalArgumentException,
-                                  ElementExistException,
-                                  RepositoryException,
-                                  UnknownPropertyException,
-                                  NoSuchElementException,
-                                  WrappedTargetException,
-                                  PropertyVetoException,
-                                  ExpandVetoException,
-                                  java.text.ParseException,
-                                  java.io.IOException,
+    private void refresh() throws java.io.IOException,
                                   com.sun.star.uno.Exception {
 
         logger.entering("AccessibilityPanel", "refresh");
 
-        manager.refresh();
+        try {
+			manager.refresh();
+		} catch (ChecksFailedException e) {
+			handleUnexpectedException(e);
+		}
 
         focusedIssue = null;
         Issue oldIssue = manager.selectedIssue();
@@ -1381,7 +1375,7 @@ public class AccessibilityPanel extends ComponentBase
     private void handleUnexpectedException(Exception ex) {
 
         logger.log(Level.SEVERE, null, ex);
-        UnoAwtUtils.showErrorMessageBox(docWindowPeer, "Unexpected exception","Unexpected exception");
+        UnoAwtUtils.showErrorMessageBox(docWindowPeer, "Unexpected exception","Unexpected exception: " + ex.getMessage());
 
     }
 

@@ -171,7 +171,7 @@ public class MainChecker implements RunnableChecker {
         return getIdentifier();
     }
 
-    public boolean run(){
+    public void run() throws Exception{
 
       //document.removeAccessibilityData(getIdentifier());
 
@@ -179,53 +179,43 @@ public class MainChecker implements RunnableChecker {
         reportName = MainChecker.class.getCanonicalName()
                         + "/" + new SimpleDateFormat("yyyy-MM-dd'T'HH.mm.ss").format(new Date()) + ".rdf";
 
+        settings.loadData();
+        daisyChecks = settings.daisyChecks();
+        detectedIssues.clear();
+        detectedChecks.clear();
+        textMetaMap.clear();
+
+        // Traverse document
+        traverseDocument();
+
+        // Save detected issues in RDF
+
+        XURI[] types = new XURI[]{ URI.create(document.xContext, getIdentifier()) };
+        XURI graphURI = null;
         try {
-
-            settings.loadData();
-            daisyChecks = settings.daisyChecks();
-            detectedIssues.clear();
-            detectedChecks.clear();
-            textMetaMap.clear();
-
-            // Traverse document
-            traverseDocument();
-
-            // Save detected issues in RDF
-
-            XURI[] types = new XURI[]{ URI.create(document.xContext, getIdentifier()) };
-            XURI graphURI = null;
-            try {
-                graphURI = document.xDMA.addMetadataFile(document.metaFolder + reportName, types);
-            } catch (ElementExistException e) {
-                graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + reportName);
-            }
-
-            XNamedGraph graph = document.xRepository.getGraph(graphURI);
-            Assertions assertions = new Assertions(graph, document);
-            if (detectedIssues.isEmpty()) {
-                // Create dummy assertion to indicate that the document is validated
-                assertions.create(new Issue(null, dummyCheck, this, date)).write();
-            }
-            for (Issue i : detectedIssues) {
-                if (detectedChecks.get(i.getCheck()) <= 10) {
-                    assertions.create(i).write();
-                }
-            }
-            for (Check c : detectedChecks.keySet()) {
-                if (detectedChecks.get(c) > 10) {
-                    assertions.create(new Issue(null, c, this, date, detectedChecks.get(c))).write();
-                }
-            }
-
-            document.setModified();
-
-            return true;
-
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, null, e);
+            graphURI = document.xDMA.addMetadataFile(document.metaFolder + reportName, types);
+        } catch (ElementExistException e) {
+            graphURI = URI.create(document.xContext, document.metaFolderURI.getStringValue() + reportName);
         }
 
-        return false;
+        XNamedGraph graph = document.xRepository.getGraph(graphURI);
+        Assertions assertions = new Assertions(graph, document);
+        if (detectedIssues.isEmpty()) {
+            // Create dummy assertion to indicate that the document is validated
+            assertions.create(new Issue(null, dummyCheck, this, date)).write();
+        }
+        for (Issue i : detectedIssues) {
+            if (detectedChecks.get(i.getCheck()) <= 10) {
+                assertions.create(i).write();
+            }
+        }
+        for (Check c : detectedChecks.keySet()) {
+            if (detectedChecks.get(c) > 10) {
+                assertions.create(new Issue(null, c, this, date, detectedChecks.get(c))).write();
+            }
+        }
+
+        document.setModified();
     }
 
     private void traverseDocument() throws IllegalArgumentException,
