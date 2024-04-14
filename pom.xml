@@ -31,8 +31,10 @@
 	</developers>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.6</maven.compiler.source>
+		<maven.compiler.target>1.6</maven.compiler.target>
 		<accessodf.version>${project.version}</accessodf.version>
-		<openoffice.version>3.3.0</openoffice.version>
+		<openoffice.version>3.6.3</openoffice.version>
 	</properties>
 	<modules>
 		<module>accessodf-api</module>
@@ -141,13 +143,13 @@
 	<repositories>
 		<repository>
 			<id>bertfrees-github-snapshots</id>
-			<url>http://bertfrees.github.com/snapshots/</url>
+			<url>http://bertfrees.github.io/snapshots/</url>
 		</repository>
 	</repositories>
 	<pluginRepositories>
 		<pluginRepository>
 			<id>bertfrees-github-snapshots</id>
-			<url>http://bertfrees.github.com/snapshots/</url>
+			<url>http://bertfrees.github.io/snapshots/</url>
 		</pluginRepository>
 	</pluginRepositories>
 	<distributionManagement>
